@@ -54,50 +54,56 @@ def find_best_clips(t):
         best_clips.append(clip)
     return best_clips
 
+
+def get_user_tracks(client, user):
+    # Get all tracks
+    page_size = 200
+    tracks = []
+    for i in range(0, 8200, 200):   # Soundcloud pagination maxes
+        new_tracks = client.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
+        if len(new_tracks) == 0: break
+        for t in new_tracks: tracks.append(t) 
+    return tracks
+
+def clips_from_track(t):
+    print t.title
+    best_clips = find_best_clips(t)
+
+    print "Running echonest"
+    stream_url = client.get(t.stream_url, allow_redirects=False)
+    echotrack = pyechonest.track.track_from_url(stream_url.location)
+
+    print "Getting MP3"
+    mp3file = "%s - %s.mp3" % (t.user["username"], t.title)    # Use permalink instead?
+    stream_url = client.get(t.stream_url, allow_redirects=False)
+    r = requests.get(stream_url.location)
+    open(mp3file, "wb").write(r.content)
+    print mp3file
+
+    print "Running audio analysis locally"
+    audio_file = audio.LocalAudioFile(mp3file)
+
+    for idx, clip in enumerate(best_clips):
+        # Find the bars that comprise this clip
+        bars = []
+        for bar in audio_file.analysis.bars:
+            bar_end = bar.start + bar.duration
+            if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
+                bars.append(bar)
+
+        clipfile = ("%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
+        print "Writing clip to %s" % clipfile
+        print bars[0].start, bars[-1].start + bars[-1].duration
+        audio.getpieces(audio_file, bars).encode(clipfile)
+
 if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-    # Get all tracks
-    page_size = 200
-    tracks = []
-    for i in range(0, 8200, 200):   # Soundcloud pagination maxes
-        new_tracks = client.get('/users/%s/tracks' % CONFIG["SOUNDCLOUD_USER"], order='created_at', limit=page_size, offset=i)
-        if len(new_tracks) == 0: break
-        for t in new_tracks: tracks.append(t) 
-
+    tracks = get_user_tracks(client, CONFIG["SOUNDCLOUD_USER"])
     print "Found %d tracks by user %s" % (len(tracks), CONFIG["SOUNDCLOUD_USER"])
-
     random.shuffle(tracks)
     
     for t in tracks:
-        print t.title
-        best_clips = find_best_clips(t)
-
-        print "Running echonest"
-        stream_url = client.get(t.stream_url, allow_redirects=False)
-        echotrack = pyechonest.track.track_from_url(stream_url.location)
-
-        print "Getting MP3"
-        mp3file = "%s - %s.mp3" % (t.user["username"], t.title)    # Use permalink instead?
-        stream_url = client.get(t.stream_url, allow_redirects=False)
-        r = requests.get(stream_url.location)
-        open(mp3file, "wb").write(r.content)
-        print mp3file
-
-        print "Running audio analysis locally"
-        audio_file = audio.LocalAudioFile(mp3file)
-
-        for idx, clip in enumerate(best_clips):
-            # Find the bars that comprise this clip
-            bars = []
-            for bar in audio_file.analysis.bars:
-                bar_end = bar.start + bar.duration
-                if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
-                    bars.append(bar)
-
-            clipfile = ("%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
-            print "Writing clip to %s" % clipfile
-            print bars[0].start, bars[-1].start + bars[-1].duration
-            audio.getpieces(audio_file, bars).encode(clipfile)
+        clips_from_track(t)
