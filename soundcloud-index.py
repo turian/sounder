@@ -3,6 +3,7 @@
 import soundcloud
 import pyechonest.config
 import pyechonest.track
+import echonest.remix.audio as audio
 import requests
 
 import random
@@ -77,3 +78,19 @@ if __name__ == "__main__":
         r = requests.get(stream_url.location)
         open(mp3file, "wb").write(r.content)
         print mp3file
+
+        print "Running audio analysis locally"
+        audio_file = audio.LocalAudioFile(mp3file)
+
+        for idx, clip in enumerate(best_clips):
+            # Find the bars that comprise this clip
+            bars = []
+            for bar in audio_file.analysis.bars:
+                bar_end = bar.start + bar.duration
+                if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
+                    bars.append(bar)
+
+            clipfile = ("%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
+            print "Writing clip to %s" % clipfile
+            print bars[0].start, bars[-1].start + bars[-1].duration
+            audio.getpieces(audio_file, bars).encode(clipfile)
