@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import soundcloud
+import pyechonest.config
+import pyechonest.track
 import requests
 
 import random
@@ -53,6 +55,7 @@ def find_best_clips(t):
 
 if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])
+    pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
     tracks = client.get('/users/%s/tracks' % CONFIG["SOUNDCLOUD_USER"])
     
@@ -61,6 +64,16 @@ if __name__ == "__main__":
 #    print [t.id for t in tracks]
     
     for t in tracks:
+        print t.title
         best_clips = find_best_clips(t)
+
+        print "Running echonest"
         stream_url = client.get(t.stream_url, allow_redirects=False)
-        print stream_url.location
+        echotrack = pyechonest.track.track_from_url(stream_url.location)
+
+        print "Getting MP3"
+        mp3file = "%s - %s.mp3" % (t.user["username"], t.title)    # Use permalink instead?
+        stream_url = client.get(t.stream_url, allow_redirects=False)
+        r = requests.get(stream_url.location)
+        open(mp3file, "wb").write(r.content)
+        print mp3file
