@@ -6,6 +6,7 @@ import pyechonest.track
 import echonest.remix.audio as audio
 import requests
 
+import tempfile
 import random
 
 import simplejson
@@ -74,14 +75,14 @@ def clips_from_track(t):
     echotrack = pyechonest.track.track_from_url(stream_url.location)
 
     print "Getting MP3"
-    mp3file = "%s - %s.mp3" % (t.user["username"], t.title)    # Use permalink instead?
+    mp3file = tempfile.NamedTemporaryFile(suffix=".mp3")
     stream_url = client.get(t.stream_url, allow_redirects=False)
     r = requests.get(stream_url.location)
-    open(mp3file, "wb").write(r.content)
-    print mp3file
+    open(mp3file.name, "wb").write(r.content)
+    print mp3file.name
 
     print "Running audio analysis locally"
-    audio_file = audio.LocalAudioFile(mp3file)
+    audio_file = audio.LocalAudioFile(mp3file.name)
 
     for idx, clip in enumerate(best_clips):
         # Find the bars that comprise this clip
@@ -106,4 +107,7 @@ if __name__ == "__main__":
     random.shuffle(tracks)
     
     for t in tracks:
-        clips_from_track(t)
+        try:
+            clips_from_track(t)
+        except Exception, e:
+            print "Exception on %s, SKIPPING." % t.title, type(e), e
