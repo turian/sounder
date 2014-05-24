@@ -58,11 +58,18 @@ if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
-    tracks = client.get('/users/%s/tracks' % CONFIG["SOUNDCLOUD_USER"])
-    
-    # TODO: Pagination to get all results
-    
-#    print [t.id for t in tracks]
+
+    # Get all tracks
+    page_size = 200
+    tracks = []
+    for i in range(0, 8200, 200):   # Soundcloud pagination maxes
+        new_tracks = client.get('/users/%s/tracks' % CONFIG["SOUNDCLOUD_USER"], order='created_at', limit=page_size, offset=i)
+        if len(new_tracks) == 0: break
+        for t in new_tracks: tracks.append(t) 
+
+    print "Found %d tracks by user %s" % (len(tracks), CONFIG["SOUNDCLOUD_USER"])
+
+    random.shuffle(tracks)
     
     for t in tracks:
         print t.title
