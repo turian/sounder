@@ -115,7 +115,7 @@ def clips_from_track(t):
 
         clipfile = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
         print "Writing clip to %s" % clipfile
-        print bars[0].start, bars[-1].start + bars[-1].duration
+        print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
         audio.getpieces(audio_file, bars).encode(clipfile)
         # Clean up some wav files some process left lying around
         clear_tmpdir(os.path.dirname(mp3file.name))
