@@ -105,14 +105,12 @@ def clips_from_track(t):
     print t.title
     best_clips = find_best_clips(t)
 
-    # Check if we already have clips for this file
-#    # Check if we already did this track
-#    # Do this after find_best_clips because that function has an
-#    # rng that we'd like to keep deterministic
-#    last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
-#    if os.path.exists(last_clip):
-#        print "Done", t.title
-#        return
+    # If this endpoint exists, then we don't need to process this track
+    # Do this after find_best_clips because that function has an
+    # rng that we'd like to keep deterministic
+    if firebase.get("/clips/%d" % t.user_id, "%d" % t.id):
+        print "Done", t.title
+        return
 
     print "Running echonest"
     stream_url = client.get(t.stream_url, allow_redirects=False)
@@ -128,6 +126,11 @@ def clips_from_track(t):
     print "Running audio analysis locally"
     audio_file = audio.LocalAudioFile(mp3file.name)
 
+
+    # @todo: If this endpoint exists, then we don't need to process this track
+    firebase.delete("/clips/%d" % t.user_id, "%d" % t.id);
+
+    clips_to_push = [];
     for idx, clip in enumerate(best_clips):
         # Find the bars that comprise this clip
         bars = []
@@ -150,11 +153,14 @@ def clips_from_track(t):
         s3url = k.generate_url(expires_in_seconds)
         print "S3 url:", s3url
 
-        # @todo: Do this outside the loop, when everything is done uploading to s3
-        firebase.put_async("/clip/%d/%d/%d", {"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url})
+        clips_to_push.append({"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url, "key": k.key})
 
         # Clean up some wav files some process left lying around
         clear_tmpdir(os.path.dirname(mp3file.name))
+
+    # Save the clip information to firebase
+    for c in clips_to_push:
+        firebase.post_async("/clips/%d/%d" % (t.user_id, t.id), c)
 
 if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])
