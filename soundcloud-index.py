@@ -23,9 +23,13 @@ os.environ["AWS_ACCESS_KEY_ID"] = CONFIG["AWS_ACCESS_KEY_ID"]
 os.environ["AWS_SECRET_ACCESS_KEY"] = CONFIG["AWS_SECRET_ACCESS_KEY"]
 
 import boto     # Import this after we set the environment variables
+import boto.s3.key
 
 firebase = firebase.FirebaseApplication(CONFIG["FIREBASE_URL"], None)
+
 s3 = boto.connect_s3()
+print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
+s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
 
 
 def comments_per_clip(comments, start, end):
@@ -82,9 +86,9 @@ def get_user_tracks(client, user):
         if len(new_tracks) == 0: break
         for t in new_tracks: tracks.append(t)
 
+    # @todo: Don't delete everything. Just insert what's new.
     firebase.delete("/tracks", user);
     for t in tracks:
-        print t
         firebase.post_async("/tracks/%s" % user, t.obj);
     
     return tracks
@@ -105,9 +109,9 @@ def clips_from_track(t):
     # Do this after find_best_clips because that function has an
     # rng that we'd like to keep deterministic
     last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
-    if os.path.exists(last_clip):
-        print "Done", t.title
-        return
+#    if os.path.exists(last_clip):
+#        print "Done", t.title
+#        return
 
     print "Running echonest"
     stream_url = client.get(t.stream_url, allow_redirects=False)
@@ -131,17 +135,21 @@ def clips_from_track(t):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        clipfile = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
         print "Writing clip to %s" % clipfile
         print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
-        audio.getpieces(audio_file, bars).encode(clipfile)
+        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3")
+        audio.getpieces(audio_file, bars).encode(clipfile.name)
+
+        k = boto.s3.key.Key(s3bucket)
+        clips3file = ("clips/%d/%d/%d.mp3" % (t.user_id, t.id, idx))
+        k.key = clips3file
+        print "Uploading some data to " + s3bucket + " with key: " + k.key
+        k.set_contents_from_filename(clipfile.name)
+
         # Clean up some wav files some process left lying around
         clear_tmpdir(os.path.dirname(mp3file.name))
 
 if __name__ == "__main__":
-    print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
-    bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
-    
     random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
