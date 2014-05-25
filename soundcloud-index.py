@@ -64,7 +64,7 @@ def find_best_clips(t):
     # Find the most commented clips
     best_clips = []
     for clip in clips:
-        if len(best_clips) > CONFIG["CLIPS_PER_TRACK"]: break
+        if len(best_clips) >= CONFIG["CLIPS_PER_TRACK"]: break
         # Make sure it doesn't overlap an existing best clip
         overlap = False
         for clip2 in best_clips:
@@ -149,6 +149,7 @@ def clips_from_track(t):
         k.key = clips3file
         print "Uploading some data to s3bucket with key: " + k.key
         k.set_contents_from_filename(clipfile.name)
+        k.set_acl('public-read')
         expires_in_seconds = 999999999
         s3url = k.generate_url(expires_in_seconds)
         print "S3 url:", s3url
