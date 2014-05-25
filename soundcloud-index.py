@@ -105,10 +105,11 @@ def clips_from_track(t):
     print t.title
     best_clips = find_best_clips(t)
 
-    # Check if we already did this track
-    # Do this after find_best_clips because that function has an
-    # rng that we'd like to keep deterministic
-    last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
+    # Check if we already have clips for this file
+#    # Check if we already did this track
+#    # Do this after find_best_clips because that function has an
+#    # rng that we'd like to keep deterministic
+#    last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
 #    if os.path.exists(last_clip):
 #        print "Done", t.title
 #        return
@@ -135,16 +136,22 @@ def clips_from_track(t):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        print "Writing clip to %s" % clipfile
-        print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
         clipfile = tempfile.NamedTemporaryFile(suffix=".mp3")
+        print "Writing clip to %s" % clipfile.name
+        print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
         audio.getpieces(audio_file, bars).encode(clipfile.name)
 
         k = boto.s3.key.Key(s3bucket)
         clips3file = ("clips/%d/%d/%d.mp3" % (t.user_id, t.id, idx))
         k.key = clips3file
-        print "Uploading some data to " + s3bucket + " with key: " + k.key
+        print "Uploading some data to s3bucket with key: " + k.key
         k.set_contents_from_filename(clipfile.name)
+        expires_in_seconds = 999999999
+        s3url = k.generate_url(expires_in_seconds)
+        print "S3 url:", s3url
+
+        # @todo: Do this outside the loop, when everything is done uploading to s3
+        firebase.put_async("/clip/%d/%d/%d", {"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url})
 
         # Clean up some wav files some process left lying around
         clear_tmpdir(os.path.dirname(mp3file.name))
@@ -159,6 +166,7 @@ if __name__ == "__main__":
     random.shuffle(tracks)
     
     for t in tracks:
+#        if t.duration > 60 * 1000: continue
         try:
             clips_from_track(t)
         except Exception, e:
