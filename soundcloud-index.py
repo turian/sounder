@@ -77,8 +77,16 @@ def find_best_clips(t):
         best_clips.append(clip)
     return best_clips
 
+class Track:
+    def __init__(self, **entries): 
+        self.__dict__.update(entries)
 
 def get_user_tracks(client, user):
+    tracks = firebase.get("/tracks", user)
+    if tracks:
+        print "Found %d tracks for user %s" % (len(tracks.values()), user)
+        return [Track(**v) for v in tracks.values()]
+
     # Get all tracks
     page_size = 200
     tracks = []
@@ -89,9 +97,11 @@ def get_user_tracks(client, user):
         for t in new_tracks: tracks.append(t)
 
     # @todo: Don't delete everything. Just insert what's new.
-    firebase.delete("/tracks", user);
+    firebase.delete("/tracks", user)
     for t in tracks:
         firebase.post_async("/tracks/%s" % user, t.obj);
+
+    # @todo: Some way to make sure they were all set?
     
     return tracks
 
