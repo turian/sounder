@@ -92,7 +92,7 @@ def clips_from_track(t):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        clipfile = ("%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
+        clipfile = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
         print "Writing clip to %s" % clipfile
         print bars[0].start, bars[-1].start + bars[-1].duration
         audio.getpieces(audio_file, bars).encode(clipfile)
