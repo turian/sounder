@@ -152,7 +152,7 @@ def clips_from_track_help(t, tmpdir):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpedir)
+        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
         print "Writing clip to %s" % clipfile.name
         print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
         audio.getpieces(audio_file, bars).encode(clipfile.name)
