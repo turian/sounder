@@ -37,6 +37,8 @@ def clips_overlap(clip1, clip2):
 def find_best_clips(t):
     comments = client.get('/tracks/%s/comments' % t.id)
     clips = []
+    # Reseed. Hopefully this makes the code deterministic
+    random.seed(CONFIG["RANDOM_SEED"])
     for i in range(CONFIG["CLIPS_TO_TEST"]):
         start = random.randint(0, t.duration - CONFIG["CLIP_DURATION"]*1000)
         end = start + CONFIG["CLIP_DURATION"]*1000
