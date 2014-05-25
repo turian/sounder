@@ -16,4 +16,9 @@ Then run:
 Client
 ------
 
+cd client/
 bower install && npm install
+
+To deploy:
+
+cd app && firebase deploy

@@ -14,8 +14,12 @@ import glob
 
 import simplejson
 
+from firebase import firebase
+
 CONFIG = simplejson.loads(open("config.json").read())
 CONFIG.update(simplejson.loads(open("local_config.json").read()))
+
+firebase = firebase.FirebaseApplication(CONFIG["FIREBASE_URL"], None)
 
 def comments_per_clip(comments, start, end):
     i = 0
