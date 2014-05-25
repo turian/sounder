@@ -14,8 +14,23 @@ import glob
 
 import simplejson
 
+from firebase import firebase
+
 CONFIG = simplejson.loads(open("config.json").read())
 CONFIG.update(simplejson.loads(open("local_config.json").read()))
+
+os.environ["AWS_ACCESS_KEY_ID"] = CONFIG["AWS_ACCESS_KEY_ID"]
+os.environ["AWS_SECRET_ACCESS_KEY"] = CONFIG["AWS_SECRET_ACCESS_KEY"]
+
+import boto     # Import this after we set the environment variables
+import boto.s3.key
+
+firebase = firebase.FirebaseApplication(CONFIG["FIREBASE_URL"], None)
+
+s3 = boto.connect_s3()
+print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
+s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
+
 
 def comments_per_clip(comments, start, end):
     i = 0
@@ -49,7 +64,7 @@ def find_best_clips(t):
     # Find the most commented clips
     best_clips = []
     for clip in clips:
-        if len(best_clips) > CONFIG["CLIPS_PER_TRACK"]: break
+        if len(best_clips) >= CONFIG["CLIPS_PER_TRACK"]: break
         # Make sure it doesn't overlap an existing best clip
         overlap = False
         for clip2 in best_clips:
@@ -66,9 +81,16 @@ def get_user_tracks(client, user):
     page_size = 200
     tracks = []
     for i in range(0, 8200, 200):   # Soundcloud pagination maxes
+        print "Getting page %d for %s" % (i, user)
         new_tracks = client.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
         if len(new_tracks) == 0: break
-        for t in new_tracks: tracks.append(t) 
+        for t in new_tracks: tracks.append(t)
+
+    # @todo: Don't delete everything. Just insert what's new.
+    firebase.delete("/tracks", user);
+    for t in tracks:
+        firebase.post_async("/tracks/%s" % user, t.obj);
+    
     return tracks
 
 # Some program leaves wav files lying around.
@@ -83,11 +105,10 @@ def clips_from_track(t):
     print t.title
     best_clips = find_best_clips(t)
 
-    # Check if we already did this track
+    # If this endpoint exists, then we don't need to process this track
     # Do this after find_best_clips because that function has an
     # rng that we'd like to keep deterministic
-    last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
-    if os.path.exists(last_clip):
+    if firebase.get("/clips/%d" % t.user_id, "%d" % t.id):
         print "Done", t.title
         return
 
@@ -105,6 +126,11 @@ def clips_from_track(t):
     print "Running audio analysis locally"
     audio_file = audio.LocalAudioFile(mp3file.name)
 
+
+    # @todo: If this endpoint exists, then we don't need to process this track
+    firebase.delete("/clips/%d" % t.user_id, "%d" % t.id);
+
+    clips_to_push = [];
     for idx, clip in enumerate(best_clips):
         # Find the bars that comprise this clip
         bars = []
@@ -113,12 +139,29 @@ def clips_from_track(t):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        clipfile = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, idx))
-        print "Writing clip to %s" % clipfile
+        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3")
+        print "Writing clip to %s" % clipfile.name
         print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
-        audio.getpieces(audio_file, bars).encode(clipfile)
+        audio.getpieces(audio_file, bars).encode(clipfile.name)
+
+        k = boto.s3.key.Key(s3bucket)
+        clips3file = ("clips/%d/%d/%d.mp3" % (t.user_id, t.id, idx))
+        k.key = clips3file
+        print "Uploading some data to s3bucket with key: " + k.key
+        k.set_contents_from_filename(clipfile.name)
+        k.set_acl('public-read')
+        expires_in_seconds = 999999999
+        s3url = k.generate_url(expires_in_seconds)
+        print "S3 url:", s3url
+
+        clips_to_push.append({"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url, "key": k.key})
+
         # Clean up some wav files some process left lying around
         clear_tmpdir(os.path.dirname(mp3file.name))
+
+    # Save the clip information to firebase
+    for c in clips_to_push:
+        firebase.post_async("/clips/%d/%d" % (t.user_id, t.id), c)
 
 if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])
@@ -130,6 +173,7 @@ if __name__ == "__main__":
     random.shuffle(tracks)
     
     for t in tracks:
+#        if t.duration > 60 * 1000: continue
         try:
             clips_from_track(t)
         except Exception, e:
