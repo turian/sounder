@@ -70,9 +70,16 @@ def get_user_tracks(client, user):
     page_size = 200
     tracks = []
     for i in range(0, 8200, 200):   # Soundcloud pagination maxes
+        print "Getting page %d for %s" % (i, user)
         new_tracks = client.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
         if len(new_tracks) == 0: break
-        for t in new_tracks: tracks.append(t) 
+        for t in new_tracks: tracks.append(t)
+
+    firebase.delete("/tracks", user);
+    for t in tracks:
+        print t
+        firebase.post_async("/tracks/%s" % user, t.obj);
+    
     return tracks
 
 # Some program leaves wav files lying around.
