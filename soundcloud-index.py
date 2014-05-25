@@ -19,7 +19,14 @@ from firebase import firebase
 CONFIG = simplejson.loads(open("config.json").read())
 CONFIG.update(simplejson.loads(open("local_config.json").read()))
 
+os.environ["AWS_ACCESS_KEY_ID"] = CONFIG["AWS_ACCESS_KEY_ID"]
+os.environ["AWS_SECRET_ACCESS_KEY"] = CONFIG["AWS_SECRET_ACCESS_KEY"]
+
+import boto     # Import this after we set the environment variables
+
 firebase = firebase.FirebaseApplication(CONFIG["FIREBASE_URL"], None)
+s3 = boto.connect_s3()
+
 
 def comments_per_clip(comments, start, end):
     i = 0
@@ -132,6 +139,9 @@ def clips_from_track(t):
         clear_tmpdir(os.path.dirname(mp3file.name))
 
 if __name__ == "__main__":
+    print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
+    bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
+    
     random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
