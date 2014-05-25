@@ -77,8 +77,17 @@ def clear_tmpdir(dir):
         os.remove(i)
 
 def clips_from_track(t):
+
     print t.title
     best_clips = find_best_clips(t)
+
+    # Check if we already did this track
+    # Do this after find_best_clips because that function has an
+    # rng that we'd like to keep deterministic
+    last_clip = ("clips/%s - %s - clip %d.mp3" % (t.user["username"], t.title, 9))
+    if os.path.exists(last_clip):
+        print "Done", t.title
+        return
 
     print "Running echonest"
     stream_url = client.get(t.stream_url, allow_redirects=False)
