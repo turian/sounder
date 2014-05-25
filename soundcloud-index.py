@@ -8,6 +8,9 @@ import requests
 
 import tempfile
 import random
+import os.path
+import os
+import glob
 
 import simplejson
 
@@ -66,6 +69,13 @@ def get_user_tracks(client, user):
         for t in new_tracks: tracks.append(t) 
     return tracks
 
+# Some program leaves wav files lying around.
+def clear_tmpdir(dir):
+    r = glob.glob(os.path.join(dir, "*.wav"))
+    for i in r:
+        print "Removing:", i
+        os.remove(i)
+
 def clips_from_track(t):
     print t.title
     best_clips = find_best_clips(t)
@@ -96,6 +106,8 @@ def clips_from_track(t):
         print "Writing clip to %s" % clipfile
         print bars[0].start, bars[-1].start + bars[-1].duration
         audio.getpieces(audio_file, bars).encode(clipfile)
+        # Clean up some wav files some process left lying around
+        clear_tmpdir(os.path.dirname(mp3file.name))
 
 if __name__ == "__main__":
     random.seed(CONFIG["RANDOM_SEED"])

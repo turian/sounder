@@ -8,3 +8,10 @@ Installation
 ------------
 
 Copy local_config.json.tmpl to local_config.json, and fill in the values.
+
+
+
+Client
+------
+
+bower install && npm install
