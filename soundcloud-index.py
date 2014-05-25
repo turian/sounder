@@ -11,6 +11,7 @@ import random
 import os.path
 import os
 import glob
+import shutil
 
 import simplejson
 
@@ -52,8 +53,9 @@ def clips_overlap(clip1, clip2):
 def find_best_clips(t):
     comments = client.get('/tracks/%s/comments' % t.id)
     clips = []
-    # Reseed. Hopefully this makes the code deterministic
-    random.seed(CONFIG["RANDOM_SEED"])
+
+#    # Reseed. Hopefully this makes the code deterministic
+#    random.seed(CONFIG["RANDOM_SEED"])
     for i in range(CONFIG["CLIPS_TO_TEST"]):
         start = random.randint(0, t.duration - CONFIG["CLIP_DURATION"]*1000)
         end = start + CONFIG["CLIP_DURATION"]*1000
@@ -101,7 +103,18 @@ def clear_tmpdir(dir):
         os.remove(i)
 
 def clips_from_track(t):
+    tmpdir = tempfile.mkdtemp()
+    print "Working in tmpdir", tmpdir
+    try:
+        clips_from_track_help(t, tmpdir)
+    except Exception, e:
+        print "Exception on %s, SKIPPING." % t.title, type(e), e
+    finally:
+        # Clean up files lying around in that directory
+        print "Clearing tmpdir", tmpdir
+        shutil.rmtree(tmpdir)
 
+def clips_from_track_help(t, tmpdir):
     print t.title
     best_clips = find_best_clips(t)
 
@@ -117,7 +130,7 @@ def clips_from_track(t):
     echotrack = pyechonest.track.track_from_url(stream_url.location)
 
     print "Getting MP3"
-    mp3file = tempfile.NamedTemporaryFile(suffix=".mp3")
+    mp3file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
     stream_url = client.get(t.stream_url, allow_redirects=False)
     r = requests.get(stream_url.location)
     open(mp3file.name, "wb").write(r.content)
@@ -139,7 +152,7 @@ def clips_from_track(t):
             if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
                 bars.append(bar)
 
-        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3")
+        clipfile = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpedir)
         print "Writing clip to %s" % clipfile.name
         print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
         audio.getpieces(audio_file, bars).encode(clipfile.name)
@@ -156,15 +169,13 @@ def clips_from_track(t):
 
         clips_to_push.append({"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url, "key": k.key})
 
-        # Clean up some wav files some process left lying around
-        clear_tmpdir(os.path.dirname(mp3file.name))
-
     # Save the clip information to firebase
     for c in clips_to_push:
         firebase.post_async("/clips/%d/%d" % (t.user_id, t.id), c)
 
 if __name__ == "__main__":
-    random.seed(CONFIG["RANDOM_SEED"])
+    random.seed()   # Use a random seed
+#    random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
@@ -173,8 +184,4 @@ if __name__ == "__main__":
     random.shuffle(tracks)
     
     for t in tracks:
-#        if t.duration > 60 * 1000: continue
-        try:
-            clips_from_track(t)
-        except Exception, e:
-            print "Exception on %s, SKIPPING." % t.title, type(e), e
+        clips_from_track(t)
