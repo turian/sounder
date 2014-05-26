@@ -80,6 +80,6 @@ var switchTrack = function() {
 
 $("#play-button").click(function(){
     switchTrack();
-//  ("#play-button").hide();
-//  ("#swipe-button").show();
+    $("#play-button").hide();
+    $("#swipe-button").show();
 });
