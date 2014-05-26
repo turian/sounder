@@ -26,6 +26,10 @@ $.getJSON('/firebase.json', function(data) {
             keys3 = Object.keys(data[key1][key2]);
             for (var k = 0; k < keys3.length; k += 1) {
                 key3 = keys3[k];
+                // Remove query params from the URL
+                // @todo REMOVEME, we only do this because the S3 urls are messed up
+                var re = /\?.*/;
+                data[key1][key2][key3].url = data[key1][key2][key3].url.replace(re, "");
                 if (data[key1][key2][key3]) {
                     allClips.push({
                         artist: key1,
@@ -41,9 +45,11 @@ $.getJSON('/firebase.json', function(data) {
       console.log("Loaded " + allClips.length + " clips");
       // Shuffle the clips, in place
       allClips = window.knuthShuffle(allClips.slice(0));
+      $("#start-button").show();
     });
 });
 
+$("#start-button").hide();
 $("#play-button").hide();
 $("#swipe-button").hide();
 
@@ -51,16 +57,24 @@ var clipIdx = 0;
 
 var trackSounds = []
 
-var updateTrackSounds = function() {
+var updateTrackCount = function() {
     $("#songs-loaded").html(trackSounds.length + " songs preloaded");
 }
 
+var isLoading = false;
 var getTrack = function() {
+  console.log("Trying to getTrack");
+  console.log("isLoading " + isLoading);
   // @todo: Get more track URLs
   if (clipIdx >= allClips.length) return;
 
+  // If we are already trying to load a track then just continue
+  if (isLoading) return;
+
   trackUrl = allClips[clipIdx++].data.url;
   console.log("trying to getTrack " + trackUrl);
+  isLoading = true;
+  console.log("isLoading " + isLoading);
   // Ready to use; soundManager.createSound() etc. can now be called.
   var mySound = soundManager.createSound({
     id: trackUrl,
@@ -72,8 +86,9 @@ var getTrack = function() {
   });
   mySound.load( { 
     onload: function() { 
+        isLoading = false;
         trackSounds.push(this);
-        updateTrackSounds();
+        updateTrackCount();
         if (trackSounds.length == 1) {
             $("#play-button").show();
         }
@@ -100,7 +115,8 @@ var switchTrack = function() {
         currentTrack.stop();
     }
     currentTrack = trackSounds.shift();
-    updateTrackSounds();
+    updateTrackCount();
+    getTrack();
     currentTrack.play({
         onfinish: function() {
             switchTrack();
