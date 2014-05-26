@@ -17,7 +17,7 @@
     <!-- endbuild -->
   </head>
 
-  <body ng-app="App">
+  <body>
 
     <ion-pane>
       <ion-header-bar class="bar-stable">
@@ -25,7 +25,7 @@
       </ion-header-bar>
       <ion-content class="has-header">
 
-        <button class="button button-energized" ng-click="playSound()" id="play-button">
+        <button class="button button-energized" id="play-button">
           <i class="ion-play" data-pack="default" data-tags="music, watch, arrow, right"></i>
         </button>
 
@@ -48,7 +48,8 @@
     <!-- endbuild -->
     
     <!-- build:js({.tmp,app}) scripts/scripts.js -->
-    <script src="scripts/app.js"></script>
+<!--    <script src="scripts/app.js"></script> -->
+    <script src="scripts/sounder.js"></script>
     <!-- endbuild -->
 
     <!-- cordova script (this will be a 404 during development) -->
