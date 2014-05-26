@@ -62,7 +62,6 @@ var getTrack = function() {
 }
 
 $(function() {
-    $('#start-button').draggable();
 });
 
 $("#start-button").click(function(){
@@ -79,9 +78,23 @@ var switchTrack = function() {
     currentTrack.play();
 }
 
+var originalSwipePosition = null;
 $("#play-button").click(function(){
     switchTrack();
     $("#play-button").hide();
     $("#swipe-button").show();
-    $('#swipe-button').draggable();
+    $('#swipe-button').draggable({
+        stop: function() {
+//            console.log($('#swipe-button').offset());
+            diff = $('#swipe-button').offset().left - originalSwipePosition.left;
+            if (diff > 100) {
+//                swipeRight();
+            } else if (diff < -100) {
+//                swipeLeft();
+            }
+            $('#swipe-button').offset({ top: originalSwipePosition.top, left: originalSwipePosition.left});
+        }
+    });
+    originalSwipePosition = $('#swipe-button').offset();
+    console.log($('#swipe-button').offset());
 });
