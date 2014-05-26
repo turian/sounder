@@ -5,7 +5,8 @@
     "angular": "~1.2.12",
     "ionic": "v1.0.0-beta.5b",
     "soundmanager2": null,
-    "firebase": null
+    "firebase": null,
+    "jquery": null
   },
   "devDependencies": {
     "angular-mocks": "~1.2.12",
