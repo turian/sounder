@@ -20,6 +20,7 @@ $.getJSON('/firebase.json', function(data) {
 });
 
 $("#play-button").hide();
+$("#swipe-button").hide();
 
 var trackUrls = [
 'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/2.mp3',
@@ -68,6 +69,17 @@ $("#start-button").click(function(){
   getTrack();
 });
 
+var currentTrack = null;
+var switchTrack = function() {
+    if (currentTrack) {
+        currentTrack.stop();
+    }
+    currentTrack = trackSounds.shift();
+    currentTrack.play();
+}
+
 $("#play-button").click(function(){
-  trackSounds[0].play();
+    switchTrack();
+//  ("#play-button").hide();
+//  ("#swipe-button").show();
 });
