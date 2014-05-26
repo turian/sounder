@@ -102,7 +102,11 @@ var getTrack = function() {
   // If we are already trying to load a track then just continue
   if (isLoading) return;
 
-  trackUrl = allClips[clipIdx++].data.url;
+  artist = allClips[clipIdx].artist;
+  track = allClips[clipIdx].track;
+  clip = allClips[clipIdx].clip;
+  trackUrl = allClips[clipIdx].data.url;
+  clipIdx++;
   console.log("trying to getTrack " + trackUrl);
   isLoading = true;
   console.log("isLoading " + isLoading);
@@ -118,7 +122,7 @@ var getTrack = function() {
   mySound.load( { 
     onload: function() { 
         isLoading = false;
-        trackSounds.push(this);
+        trackSounds.push({artist: artist, track: track, clip: clip, sound: this});
         updateTrackCount();
         if (trackSounds.length == 1) {
             $("#play-button").show();
@@ -143,27 +147,43 @@ $("#start-button").click(function(){
 var currentTrack = null;
 var switchTrack = function() {
     if (currentTrack) {
-        currentTrack.stop();
+        currentTrack.sound.stop();
     }
     currentTrack = trackSounds.shift();
     console.log(currentTrack);
-//    $("#track-hash").attr("src","http://robohash.org/" + currentTrack.url + ".png");
+//    $("#track-hash").attr("src","http://robohash.org/" + currentTrack.sound.url + ".png");
     updateTrackCount();
     getTrack();
-    currentTrack.play({
+    currentTrack.sound.play({
         onfinish: function() {
-            switchTrack();
+            noSwipe();
         }
     });
 }
 
-// @todo Store judgment
 var swipeLeft = function() {
-    switchTrack();
+    userAction("left");
 }
 
-// @todo Store judgment
-var swipeRight= function() {
+var swipeRight = function() {
+    userAction("right");
+}
+
+// No swipe occurred
+var noSwipe = function() {
+    userAction("none");
+}
+
+var userAction = function(action) {
+    var data = {
+        artist: currentTrack.artist,
+        track: currentTrack.track,
+        clip: currentTrack.clip,
+        action: action,
+        position: currentTrack.sound.position,
+        performedAt: Firebase.ServerValue.TIMESTAMP
+    }
+    firebase.child("actions").child(user.id).push(data);
     switchTrack();
 }
 
