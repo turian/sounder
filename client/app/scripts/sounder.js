@@ -81,7 +81,21 @@ var switchTrack = function() {
     }
     currentTrack = trackSounds.shift();
     updateTrackSounds();
-    currentTrack.play();
+    currentTrack.play({
+        onfinish: function() {
+            switchTrack();
+        }
+    });
+}
+
+// @todo Store judgment
+var swipeLeft = function() {
+    switchTrack();
+}
+
+// @todo Store judgment
+var swipeRight= function() {
+    switchTrack();
 }
 
 var originalSwipePosition = null;
@@ -94,9 +108,9 @@ $("#play-button").click(function(){
 //            console.log($('#swipe-button').offset());
             diff = $('#swipe-button').offset().left - originalSwipePosition.left;
             if (diff > 100) {
-//                swipeRight();
+                swipeRight();
             } else if (diff < -100) {
-//                swipeLeft();
+                swipeLeft();
             }
             $('#swipe-button').offset({ top: originalSwipePosition.top, left: originalSwipePosition.left});
         }
