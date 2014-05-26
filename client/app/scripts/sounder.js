@@ -25,10 +25,11 @@ var soundcloudLogin = function () {
             // This gets the authenticated user's username
             SC.get('/me', function(me) { 
               $("#username-div").html(me.username);
-              user = me;
+              user = {id: me.id, soundcloud: me};
               if (allClips && user) {
                   $("#start-button").show();
               }
+              firebase.child("users").child(user.id).update(user);
             });
         });
     });
