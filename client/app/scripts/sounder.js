@@ -115,6 +115,8 @@ var switchTrack = function() {
         currentTrack.stop();
     }
     currentTrack = trackSounds.shift();
+    console.log(currentTrack);
+//    $("#track-hash").attr("src","http://robohash.org/" + currentTrack.url + ".png");
     updateTrackCount();
     getTrack();
     currentTrack.play({
