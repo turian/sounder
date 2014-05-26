@@ -22,6 +22,7 @@ Client
 Install:
 
 Copy firebase.json.tmpl to firebase.json, and fill in the values.
+Copy app/local_config.json.tmpl to app/local_config.json, and fill in the values.
 
 ```
 cd client/

@@ -7,8 +7,28 @@ soundManager.setup({
   }
 });
 
-var firebase = null;
+var SOUNDCLOUD_CLIENT = null;
+$.getJSON('/local_config.json', function(data) {
+    SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
 
+    // initialize soundcloud API with key and redirect URL
+    SC.initialize({
+        // This is the sample client_id. you should replace this with your own
+        client_id: SOUNDCLOUD_CLIENT_ID,
+        redirect_uri: "http://localhost:9000/callback.html" // @todo: Configure this for deployment
+    });
+
+    // initiate authentication popup
+    SC.connect(function() {
+        // This gets the authenticated user's username
+        SC.get('/me', function(me) { 
+          alert('Hello, ' + me.username); 
+          console.log(me);
+        });
+    });
+});
+
+var firebase = null;
 var allClips = []
 $.getJSON('/firebase.json', function(data) {
     firebase_url = "https://" + data.firebase + ".firebaseio.com/"
@@ -102,6 +122,11 @@ var getTrack = function() {
 }
 
 $(function() {
+    OAuth.initialize('FC0afKSVvBj7AbIqz-Hr9TSM0GY');
+    OAuth.popup('soundcloud', function(err, result) {
+        // handle error with err
+        // use result.access_token in your API request
+    });
 });
 
 $("#start-button").click(function(){
