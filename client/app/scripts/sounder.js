@@ -33,6 +33,10 @@ var trackIdx = 0;
 
 var trackSounds = []
 
+var updateTrackSounds = function() {
+    $("#songs-loaded").html(trackSounds.length + " songs preloaded");
+}
+
 var getTrack = function() {
   // @todo: Get more track URLs
   if (trackIdx >= trackUrls.length) return;
@@ -51,6 +55,7 @@ var getTrack = function() {
   mySound.load( { 
     onload: function() { 
         trackSounds.push(this);
+        updateTrackSounds();
         if (trackSounds.length == 1) {
             $("#play-button").show();
         }
@@ -75,6 +80,7 @@ var switchTrack = function() {
         currentTrack.stop();
     }
     currentTrack = trackSounds.shift();
+    updateTrackSounds();
     currentTrack.play();
 }
 
