@@ -16,6 +16,8 @@ Then run:
 Client
 ------
 
+Copy firebase.json.tmpl to firebase.json, and fill in the values.
+
 cd client/
 bower install && npm install
 
