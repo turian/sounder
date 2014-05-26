@@ -17,7 +17,7 @@
     <!-- endbuild -->
   </head>
 
-  <body ng-app="App">
+  <body>
 
     <ion-pane>
       <ion-header-bar class="bar-stable">
@@ -25,9 +25,19 @@
       </ion-header-bar>
       <ion-content class="has-header">
 
-        <button class="button button-energized" ng-click="playSound()" id="play-button">
+        <button class="button button-energized" id="start-button">
+          <i class="ion-ionic" data-pack="default" data-tags="music, watch, arrow, right"></i>
+        </button>
+        <button class="button button-energized" id="play-button">
           <i class="ion-play" data-pack="default" data-tags="music, watch, arrow, right"></i>
         </button>
+        <center>
+        <div class="button button-energized" id="swipe-button">
+          <i class="ion-flash" data-pack="default"></i>
+        </div >
+        </center>
+
+        <div id="songs-loaded"></div>
 
       </ion-content>
     </ion-pane>
@@ -44,11 +54,14 @@
     <script src="bower_components/ionic/release/js/ionic.js"></script>
     <script src="bower_components/ionic/release/js/ionic-angular.js"></script>
     <script src="bower_components/firebase/firebase.js"></script>
+    <script src="bower_components/jquery-ui/ui/jquery-ui.js"></script>
+    <script src="bower_components/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
     
     <!-- build:js({.tmp,app}) scripts/scripts.js -->
-    <script src="scripts/app.js"></script>
+<!--    <script src="scripts/app.js"></script> -->
+    <script src="scripts/sounder.js"></script>
     <!-- endbuild -->
 
     <!-- cordova script (this will be a 404 during development) -->

@@ -6,7 +6,9 @@
     "ionic": "v1.0.0-beta.5b",
     "soundmanager2": null,
     "firebase": null,
-    "jquery": null
+    "jquery": null,
+    "jquery-ui": null,
+    "jquery-ui-touch-punch": null
   },
   "devDependencies": {
     "angular-mocks": "~1.2.12",
