@@ -234,6 +234,7 @@ module.exports = function (grunt) {
           cwd: '<%= yeoman.app %>',
           dest: 'www',
           src: [
+            'bower_components/soundmanager2/swf/*.swf',
             'images/**/*.{png,jpg,jpeg,gif,webp,svg}',
             '*.html',
             '*.json',
