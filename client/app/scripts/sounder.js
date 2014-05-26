@@ -154,3 +154,13 @@ $("#play-button").click(function(){
     originalSwipePosition = $('#swipe-button').offset();
     console.log($('#swipe-button').offset());
 });
+
+$("body").keydown(function(e) {
+    if (currentTrack) {
+        if(e.keyCode == 37) { // left
+            swipeLeft();
+        } else if(e.keyCode == 39) { // right
+            swipeRight();
+        }
+    }
+});
