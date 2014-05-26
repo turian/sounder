@@ -182,7 +182,8 @@ module.exports = function (grunt) {
         flow: {
           html: {
             steps: {
-              js: ['concat', 'uglifyjs'],
+//              js: ['concat', 'uglifyjs'],     // Commented out for build speed
+              js: ['concat'],
               css: ['cssmin']
             },
             post: {}
@@ -476,10 +477,10 @@ module.exports = function (grunt) {
     'concurrent:dist',
     'autoprefixer',
     'concat',
-    'ngmin',
-    'copy:dist',
+//    'ngmin',
+    'copy:dist',     // Commented out for build speed
     'cssmin',
-    'uglify',
+//    'uglify',     // Commented out for build speed
     'usemin',
     'htmlmin',
     'cordova:build'
