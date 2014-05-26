@@ -62,6 +62,7 @@ var getTrack = function() {
 }
 
 $(function() {
+    $('#start-button').draggable();
 });
 
 $("#start-button").click(function(){
@@ -82,4 +83,5 @@ $("#play-button").click(function(){
     switchTrack();
     $("#play-button").hide();
     $("#swipe-button").show();
+    $('#swipe-button').draggable();
 });

@@ -6,8 +6,8 @@
     "ionic": "v1.0.0-beta.5b",
     "soundmanager2": null,
     "firebase": null,
-    "jquery": null,
-    "jquery-ui": null,
+    "jquery": "1.8.1",
+    "jquery-ui": "1.8.23",
     "jquery-ui-touch-punch": null
   },
   "devDependencies": {
