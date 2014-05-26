@@ -7,7 +7,6 @@ soundManager.setup({
   }
 });
 
-var isReady = false;
 var firebase = null;
 
 $.getJSON('/firebase.json', function(data) {
@@ -34,29 +33,41 @@ var trackIdx = 0;
 var trackSounds = []
 
 var getTrack = function() {
+  // @todo: Get more track URLs
+  if (trackIdx >= trackUrls.length) return;
+
   trackUrl = trackUrls[trackIdx++];
+  console.log("trying to getTrack " + trackUrl);
   // Ready to use; soundManager.createSound() etc. can now be called.
   var mySound = soundManager.createSound({
     id: trackUrl,
     url: trackUrl,
+    whileloading: function() {
+      console.log(this.id + ': loading ' + this.bytesLoaded + ' / ' + this.bytesTotal);
+    },
+    autoLoad: true
   });
-  trackSounds.push(mySound);
-  trackSounds[trackSounds.length-1].load( { 
+  mySound.load( { 
     onload: function() { 
-        console.log("loaded " + trackUrl);
+        trackSounds.push(this);
+        if (trackSounds.length == 1) {
+            $("#play-button").show();
+        }
+        console.log("loaded " + this.url);
         // Start loading next track
         getTrack();
     } 
   });
-
-  isReady = true;
-    
 }
 
 $(function() {
+});
+
+$("#start-button").click(function(){
+  $("#start-button").hide();
   getTrack();
-  $("#play-button").show();
 });
 
 $("#play-button").click(function(){
+  trackSounds[0].play();
 });
