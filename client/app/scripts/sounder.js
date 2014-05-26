@@ -7,13 +7,42 @@ soundManager.setup({
   }
 });
 
-var firebase = null;
+var SOUNDCLOUD_CLIENT_ID = null;
+var user = null;
+var soundcloudLogin = function () {
+    $.getJSON('/local_config.json', function(data) {
+        SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
+    
+        // initialize soundcloud API with key and redirect URL
+        SC.initialize({
+            // This is the sample client_id. you should replace this with your own
+            client_id: SOUNDCLOUD_CLIENT_ID,
+            redirect_uri: "http://localhost:9000/callback.html" // @todo: Configure this for deployment
+        });
+    
+        // initiate authentication popup
+        SC.connect(function() {
+            // This gets the authenticated user's username
+            SC.get('/me', function(me) { 
+              $("#username-div").html(me.username);
+              user = {id: me.id, soundcloud: me};
+              if (allClips && user) {
+                  $("#start-button").show();
+              }
+              firebase.child("users").child(user.id).update(user);
+            });
+        });
+    });
+}
 
+var firebase = null;
 var allClips = []
 $.getJSON('/firebase.json', function(data) {
     firebase_url = "https://" + data.firebase + ".firebaseio.com/"
 
     firebase = new Firebase(firebase_url);
+
+    soundcloudLogin();
 
     firebase.child("clips").once('value', function(data) {
       data = data.val();
@@ -45,7 +74,9 @@ $.getJSON('/firebase.json', function(data) {
       console.log("Loaded " + allClips.length + " clips");
       // Shuffle the clips, in place
       allClips = window.knuthShuffle(allClips.slice(0));
-      $("#start-button").show();
+      if (allClips && user) {
+          $("#start-button").show();
+      }
     });
 });
 
