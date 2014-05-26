@@ -7,7 +7,8 @@ soundManager.setup({
   }
 });
 
-var SOUNDCLOUD_CLIENT = null;
+var SOUNDCLOUD_CLIENT_ID = null;
+var user = null;
 $.getJSON('/local_config.json', function(data) {
     SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
 
@@ -22,8 +23,11 @@ $.getJSON('/local_config.json', function(data) {
     SC.connect(function() {
         // This gets the authenticated user's username
         SC.get('/me', function(me) { 
-          alert('Hello, ' + me.username); 
-          console.log(me);
+          $("#username-div").html(me.username);
+          user = me;
+          if (allClips && user) {
+              $("#start-button").show();
+          }
         });
     });
 });
@@ -65,7 +69,9 @@ $.getJSON('/firebase.json', function(data) {
       console.log("Loaded " + allClips.length + " clips");
       // Shuffle the clips, in place
       allClips = window.knuthShuffle(allClips.slice(0));
-      $("#start-button").show();
+      if (allClips && user) {
+          $("#start-button").show();
+      }
     });
 });
 
@@ -122,11 +128,6 @@ var getTrack = function() {
 }
 
 $(function() {
-    OAuth.initialize('FC0afKSVvBj7AbIqz-Hr9TSM0GY');
-    OAuth.popup('soundcloud', function(err, result) {
-        // handle error with err
-        // use result.access_token in your API request
-    });
 });
 
 $("#start-button").click(function(){
