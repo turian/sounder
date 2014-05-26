@@ -18,39 +18,36 @@ $.getJSON('/firebase.json', function(data) {
     firebase.child("clips").once('value', function(data) {
       data = data.val();
       keys = Object.keys(data);
-      for (i = 0; i < keys.length; i += 1) {
+      for (var i = 0; i < keys.length; i += 1) {
         key1 = keys[i];
         keys2 = Object.keys(data[key1]);
-        for (j = 0; j < keys2.length; j += 1) {
+        for (var j = 0; j < keys2.length; j += 1) {
             key2 = keys2[j]
             keys3 = Object.keys(data[key1][key2]);
-            for (k = 0; k < keys3.length; k += 1) {
-                key3 = keys3[j]
-//                console.log(key1, key2, key3, data[key1][key2][key3]);
-                allClips.push({
-                    artist: key1,
-                    track: key2,
-                    clip: key2,
-                    data: data[key1][key2][key3]
-                });
+            for (var k = 0; k < keys3.length; k += 1) {
+                key3 = keys3[k];
+                if (data[key1][key2][key3]) {
+                    allClips.push({
+                        artist: key1,
+                        track: key2,
+                        clip: key3,
+                        data: data[key1][key2][key3]
+                    });
+                }
+                // @todo What to do if data is undefined?
             }
         }
       }
       console.log("Loaded " + allClips.length + " clips");
+      // Shuffle the clips, in place
+      allClips = window.knuthShuffle(allClips.slice(0));
     });
 });
 
 $("#play-button").hide();
 $("#swipe-button").hide();
 
-var trackUrls = [
-'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/2.mp3',
-'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/3.mp3',
-'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/4.mp3',
-'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/5.mp3'
-]
-
-var trackIdx = 0;
+var clipIdx = 0;
 
 var trackSounds = []
 
@@ -60,9 +57,9 @@ var updateTrackSounds = function() {
 
 var getTrack = function() {
   // @todo: Get more track URLs
-  if (trackIdx >= trackUrls.length) return;
+  if (clipIdx >= allClips.length) return;
 
-  trackUrl = trackUrls[trackIdx++];
+  trackUrl = allClips[clipIdx++].data.url;
   console.log("trying to getTrack " + trackUrl);
   // Ready to use; soundManager.createSound() etc. can now be called.
   var mySound = soundManager.createSound({
@@ -81,8 +78,10 @@ var getTrack = function() {
             $("#play-button").show();
         }
         console.log("loaded " + this.url);
-        // Start loading next track
-        getTrack();
+        // Start loading next track, if we don't have 10 tracks preloaded
+        if (trackSounds.length < 10) {
+            getTrack();
+        }
     } 
   });
 }

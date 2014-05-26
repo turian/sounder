@@ -8,7 +8,8 @@
     "firebase": null,
     "jquery": null,
     "jquery-ui": null,
-    "jquery-ui-touch-punch": null
+    "jquery-ui-touch-punch": null,
+    "knuth-shuffle": null
   },
   "devDependencies": {
     "angular-mocks": "~1.2.12",
