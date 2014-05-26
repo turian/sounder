@@ -9,28 +9,30 @@ soundManager.setup({
 
 var SOUNDCLOUD_CLIENT_ID = null;
 var user = null;
-$.getJSON('/local_config.json', function(data) {
-    SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
-
-    // initialize soundcloud API with key and redirect URL
-    SC.initialize({
-        // This is the sample client_id. you should replace this with your own
-        client_id: SOUNDCLOUD_CLIENT_ID,
-        redirect_uri: "http://localhost:9000/callback.html" // @todo: Configure this for deployment
-    });
-
-    // initiate authentication popup
-    SC.connect(function() {
-        // This gets the authenticated user's username
-        SC.get('/me', function(me) { 
-          $("#username-div").html(me.username);
-          user = me;
-          if (allClips && user) {
-              $("#start-button").show();
-          }
+var soundcloudLogin = function () {
+    $.getJSON('/local_config.json', function(data) {
+        SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
+    
+        // initialize soundcloud API with key and redirect URL
+        SC.initialize({
+            // This is the sample client_id. you should replace this with your own
+            client_id: SOUNDCLOUD_CLIENT_ID,
+            redirect_uri: "http://localhost:9000/callback.html" // @todo: Configure this for deployment
+        });
+    
+        // initiate authentication popup
+        SC.connect(function() {
+            // This gets the authenticated user's username
+            SC.get('/me', function(me) { 
+              $("#username-div").html(me.username);
+              user = me;
+              if (allClips && user) {
+                  $("#start-button").show();
+              }
+            });
         });
     });
-});
+}
 
 var firebase = null;
 var allClips = []
@@ -38,6 +40,8 @@ $.getJSON('/firebase.json', function(data) {
     firebase_url = "https://" + data.firebase + ".firebaseio.com/"
 
     firebase = new Firebase(firebase_url);
+
+    soundcloudLogin();
 
     firebase.child("clips").once('value', function(data) {
       data = data.val();
