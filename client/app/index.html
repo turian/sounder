@@ -24,6 +24,11 @@
         <h1 class="title">Ionic Blank Starter</h1>
       </ion-header-bar>
       <ion-content class="has-header">
+
+        <button class="button button-energized" ng-click="playSound()" id="play-button">
+          <i class="ion-play" data-pack="default" data-tags="music, watch, arrow, right"></i>
+        </button>
+
       </ion-content>
     </ion-pane>
 
@@ -43,7 +48,6 @@
     <!-- endbuild -->
     
     <!-- build:js({.tmp,app}) scripts/scripts.js -->
-    <script src="scripts/sound.js"></script>
     <script src="scripts/app.js"></script>
     <!-- endbuild -->
 

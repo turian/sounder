@@ -13,6 +13,16 @@ angular.module('App', ['ionic'])
     }
   });
 
+soundManager.setup({
+  url: '/bower_components/soundmanager2/swf/',
+  flashVersion: 9, // optional: shiny features (default = 8)
+  // optional: ignore Flash where possible, use 100% HTML5 mode
+  // preferFlash: false,
+  onready: function() {
+  }
+});
+
+
   $.getJSON('/firebase.json', function(data) {
     if (!$rootScope.config) $rootScope.config = {};
     $rootScope.config.firebase = "https://" + data.firebase + ".firebaseio.com/"
@@ -23,4 +33,13 @@ angular.module('App', ['ionic'])
       console.log(data.val());
     });
   });
+
+  $rootScope.playSound = function() {
+    // Ready to use; soundManager.createSound() etc. can now be called.
+    var mySound = soundManager.createSound({
+      id: 'aSound',
+      url: 'https://sounderapp.s3.amazonaws.com/clips/752705/117465052/2.mp3',
+    });
+    mySound.play();
+  }
 });
