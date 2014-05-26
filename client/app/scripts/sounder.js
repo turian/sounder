@@ -9,13 +9,34 @@ soundManager.setup({
 
 var firebase = null;
 
+var allClips = []
 $.getJSON('/firebase.json', function(data) {
     firebase_url = "https://" + data.firebase + ".firebaseio.com/"
 
     firebase = new Firebase(firebase_url);
 
     firebase.child("clips").once('value', function(data) {
-      console.log(data.val());
+      data = data.val();
+      keys = Object.keys(data);
+      for (i = 0; i < keys.length; i += 1) {
+        key1 = keys[i];
+        keys2 = Object.keys(data[key1]);
+        for (j = 0; j < keys2.length; j += 1) {
+            key2 = keys2[j]
+            keys3 = Object.keys(data[key1][key2]);
+            for (k = 0; k < keys3.length; k += 1) {
+                key3 = keys3[j]
+//                console.log(key1, key2, key3, data[key1][key2][key3]);
+                allClips.push({
+                    artist: key1,
+                    track: key2,
+                    clip: key2,
+                    data: data[key1][key2][key3]
+                });
+            }
+        }
+      }
+      console.log("Loaded " + allClips.length + " clips");
     });
 });
 
