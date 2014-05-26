@@ -6,10 +6,21 @@
 // the 2nd parameter is an array of 'requires'
 angular.module('App', ['ionic'])
 
-.run(function($ionicPlatform) {
+.run(function($ionicPlatform, $rootScope) {
   $ionicPlatform.ready(function() {
     if(window.StatusBar) {
       StatusBar.styleDefault();
     }
+  });
+
+  $.getJSON('/firebase.json', function(data) {
+    if (!$rootScope.config) $rootScope.config = {};
+    $rootScope.config.firebase = "https://" + data.firebase + ".firebaseio.com/"
+
+    $rootScope.firebase = new Firebase($rootScope.config.firebase);
+
+    $rootScope.firebase.child("clips").once('value', function(data) {
+      console.log(data.val());
+    });
   });
 });
