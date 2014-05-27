@@ -82,11 +82,9 @@ class Track:
         self.__dict__.update(entries)
 
 def get_user_tracks(soundcloudclient, user):
-
-def get_user_tracks(soundcloudclient, user):
     tracks = firebase.get("/tracks", user)
     if tracks:
-        print "Found %d tracks for user %s" % (len(tracks.values()), user)
+        print "Found %d tracks by artist %s" % (len(tracks.values()), user)
         return [Track(**v) for v in tracks.values()]
 
     # Get all tracks
@@ -193,10 +191,11 @@ if __name__ == "__main__":
     random.seed()   # Use a random seed
 #    random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
-    soundcloudclient = soundcloud.Client(soundcloudclient_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
+    soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-    tracks = get_user_tracks(soundcloudclient, CONFIG["SOUNDCLOUD_USER"])
-    print "Found %d tracks by user %s" % (len(tracks), CONFIG["SOUNDCLOUD_USER"])
+    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+        tracks = get_user_tracks(soundcloudclient, artist)
+        print "Found %d tracks by artist %s" % (len(tracks), artist)
     random.shuffle(tracks)
     
     for t in tracks:
