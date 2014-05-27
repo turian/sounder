@@ -7,6 +7,7 @@ soundManager.setup({
   }
 });
 
+/*
 var SOUNDCLOUD_CLIENT_ID = null;
 var user = null;
 var soundcloudLogin = function () {
@@ -34,6 +35,7 @@ var soundcloudLogin = function () {
         });
     });
 }
+*/
 
 var firebase = null;
 var allClips = []
