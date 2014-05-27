@@ -107,13 +107,6 @@ def get_artist_info(soundcloudclient, artist):
     if firebase.put_async("/artists/%s" % id, "info", info):
         return
 
-#    tracks = _get_soundcloud_list(soundcloudclient, '/users/%s/tracks' % id)
-#    print tracks
-#    followings = _get_soundcloud_list(soundcloudclient, '/users/%s/followings' % id)
-#    print followings
-#    favorites = _get_soundcloud_list(soundcloudclient, '/users/%s/favorites' % id)
-#    print favorites
-
 def get_artist_tracks(soundcloudclient, artist):
     tracks = firebase.get("/tracks", artist)
     if tracks:
@@ -214,6 +207,17 @@ if __name__ == "__main__":
 
     for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
         tracks = get_artist_info(soundcloudclient, artist)
+
+    for artist_ids in firebase.get("/", "artists"):
+        print artist
+
+#    tracks = _get_soundcloud_list(soundcloudclient, '/users/%s/tracks' % id)
+#    print tracks
+#    followings = _get_soundcloud_list(soundcloudclient, '/users/%s/followings' % id)
+#    print followings
+#    favorites = _get_soundcloud_list(soundcloudclient, '/users/%s/favorites' % id)
+#    print favorites
+
 #    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
 #        tracks = get_artist_tracks(soundcloudclient, artist)
 #        print "Found %d tracks by artist %s" % (len(tracks), artist)
