@@ -36,6 +36,8 @@ Copy app/local_config.json.tmpl to app/local_config.json, and fill in the values
 ```
 cd client/
 bower install && npm install
+npm install -g firebase-tools
+firebase init
 ```
 
 Build:
