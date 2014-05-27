@@ -51,7 +51,7 @@ def clips_overlap(clip1, clip2):
     return False
 
 def find_best_clips(t):
-    comments = client.get('/tracks/%s/comments' % t.id)
+    comments = soundcloudclient.get('/tracks/%s/comments' % t.id)
     clips = []
 
 #    # Reseed. Hopefully this makes the code deterministic
@@ -81,7 +81,9 @@ class Track:
     def __init__(self, **entries): 
         self.__dict__.update(entries)
 
-def get_user_tracks(client, user):
+def get_user_tracks(soundcloudclient, user):
+
+def get_user_tracks(soundcloudclient, user):
     tracks = firebase.get("/tracks", user)
     if tracks:
         print "Found %d tracks for user %s" % (len(tracks.values()), user)
@@ -92,7 +94,7 @@ def get_user_tracks(client, user):
     tracks = []
     for i in range(0, 8200, 200):   # Soundcloud pagination maxes
         print "Getting page %d for %s" % (i, user)
-        new_tracks = client.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
+        new_tracks = soundcloudclient.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
         if len(new_tracks) == 0: break
         for t in new_tracks: tracks.append(t)
 
@@ -136,12 +138,16 @@ def clips_from_track_help(t, tmpdir):
         return
 
     print "Running echonest"
-    stream_url = client.get(t.stream_url, allow_redirects=False)
+    stream_url = soundcloudclient.get(t.stream_url, allow_redirects=False)
     echotrack = pyechonest.track.track_from_url(stream_url.location)
+
+#    print "Getting analysis"
+#    r = requests.get(echotrack.analysis_url)
+#    .write(r.content)
 
     print "Getting MP3"
     mp3file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
-    stream_url = client.get(t.stream_url, allow_redirects=False)
+    stream_url = soundcloudclient.get(t.stream_url, allow_redirects=False)
     r = requests.get(stream_url.location)
     open(mp3file.name, "wb").write(r.content)
     print mp3file.name
@@ -187,9 +193,9 @@ if __name__ == "__main__":
     random.seed()   # Use a random seed
 #    random.seed(CONFIG["RANDOM_SEED"])
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
-    client = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
+    soundcloudclient = soundcloud.Client(soundcloudclient_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-    tracks = get_user_tracks(client, CONFIG["SOUNDCLOUD_USER"])
+    tracks = get_user_tracks(soundcloudclient, CONFIG["SOUNDCLOUD_USER"])
     print "Found %d tracks by user %s" % (len(tracks), CONFIG["SOUNDCLOUD_USER"])
     random.shuffle(tracks)
     
