@@ -33,14 +33,14 @@ print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
 s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
 
 
-def comments_per_clip(comments, start, end):
+def _comments_per_clip(comments, start, end):
     i = 0
     for c in comments:
         if c.timestamp >= start and c.timestamp <= end:
             i += 1
     return i
 
-def clips_overlap(clip1, clip2):
+def _clips_overlap(clip1, clip2):
     start1 = clip1[1]
     end1 = clip1[2]
     start2 = clip2[1]
@@ -50,7 +50,7 @@ def clips_overlap(clip1, clip2):
     if start2 >= start1 and start2 <= end1: return True
     return False
 
-def find_best_clips(t):
+def _find_best_clips(t):
     comments = soundcloudclient.get('/tracks/%s/comments' % t.id)
     clips = []
 
@@ -59,7 +59,7 @@ def find_best_clips(t):
     for i in range(CONFIG["CLIPS_TO_TEST"]):
         start = random.randint(0, t.duration - CONFIG["CLIP_DURATION"]*1000)
         end = start + CONFIG["CLIP_DURATION"]*1000
-        clips.append((comments_per_clip(comments, start, end), start, end))
+        clips.append((_comments_per_clip(comments, start, end), start, end))
     clips.sort()
     clips.reverse()
     
@@ -70,7 +70,7 @@ def find_best_clips(t):
         # Make sure it doesn't overlap an existing best clip
         overlap = False
         for clip2 in best_clips:
-            if clips_overlap(clip, clip2):
+            if _clips_overlap(clip, clip2):
                 overlap = True
                 break
         if overlap: continue
@@ -105,18 +105,11 @@ def get_user_tracks(soundcloudclient, user):
     
     return tracks
 
-# Some program leaves wav files lying around.
-def clear_tmpdir(dir):
-    r = glob.glob(os.path.join(dir, "*.wav"))
-    for i in r:
-        print "Removing:", i
-        os.remove(i)
-
 def clips_from_track(t):
     tmpdir = tempfile.mkdtemp()
     print "Working in tmpdir", tmpdir
     try:
-        clips_from_track_help(t, tmpdir)
+        _clips_from_track_help(t, tmpdir)
     except Exception, e:
         print "Exception on %s, SKIPPING." % t.title, type(e), e
     finally:
@@ -124,12 +117,12 @@ def clips_from_track(t):
         print "Clearing tmpdir", tmpdir
         shutil.rmtree(tmpdir)
 
-def clips_from_track_help(t, tmpdir):
+def _clips_from_track_help(t, tmpdir):
     print t.title
-    best_clips = find_best_clips(t)
+    best_clips = _find_best_clips(t)
 
     # If this endpoint exists, then we don't need to process this track
-    # Do this after find_best_clips because that function has an
+    # Do this after _find_best_clips because that function has an
     # rng that we'd like to keep deterministic
     if firebase.get("/clips/%d" % t.user_id, "%d" % t.id):
         print "Done", t.title
