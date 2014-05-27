@@ -81,25 +81,51 @@ class Track:
     def __init__(self, **entries): 
         self.__dict__.update(entries)
 
-def get_user_tracks(soundcloudclient, user):
-    tracks = firebase.get("/tracks", user)
+def _get_soundcloud_list(soundcloudclient, q):
+    page_size = 200
+    list = []
+    for i in range(0, 8200, 200):   # Soundcloud pagination maxes
+        print "Getting page %d for %s" % (i, q)
+#        new_items = soundcloudclient.get(q, order='created_at', limit=page_size, offset=i)
+        new_items = soundcloudclient.get(q, limit=page_size, offset=i)
+        if len(new_items) == 0: break
+        for item in new_items: list.append(item.obj)
+    return list
+
+def _get_soundcloud_dict(soundcloudclient, q):
+    list = _get_soundcloud_list(soundcloudclient, q)
+    dict = {}
+    for l in list:
+        dict[l["id"]] = l
+    return dict
+
+def get_artist_info(soundcloudclient, artist):
+    # We have to convert the artist name to an id, so we must run the soundcloudclient
+    info = soundcloudclient.get('/users/%s' % artist).obj
+    id = info["id"]
+
+    if firebase.put_async("/artists/%s" % id, "info", info):
+        return
+
+#    tracks = _get_soundcloud_list(soundcloudclient, '/users/%s/tracks' % id)
+#    print tracks
+#    followings = _get_soundcloud_list(soundcloudclient, '/users/%s/followings' % id)
+#    print followings
+#    favorites = _get_soundcloud_list(soundcloudclient, '/users/%s/favorites' % id)
+#    print favorites
+
+def get_artist_tracks(soundcloudclient, artist):
+    tracks = firebase.get("/tracks", artist)
     if tracks:
-        print "Found %d tracks by artist %s" % (len(tracks.values()), user)
+        print "Found %d tracks by artist %s" % (len(tracks.values()), artist)
         return [Track(**v) for v in tracks.values()]
 
-    # Get all tracks
-    page_size = 200
-    tracks = []
-    for i in range(0, 8200, 200):   # Soundcloud pagination maxes
-        print "Getting page %d for %s" % (i, user)
-        new_tracks = soundcloudclient.get('/users/%s/tracks' % user, order='created_at', limit=page_size, offset=i)
-        if len(new_tracks) == 0: break
-        for t in new_tracks: tracks.append(t)
+    tracks = _get_soundcloud_list(soundcloudclient, '/users/%s/tracks' % artist)
 
     # @todo: Don't delete everything. Just insert what's new.
-    firebase.delete("/tracks", user)
+    firebase.delete("/tracks", artist)
     for t in tracks:
-        firebase.post_async("/tracks/%s" % user, t.obj);
+        firebase.post_async("/tracks/%s" % artist, t);
 
     # @todo: Some way to make sure they were all set?
     
@@ -187,9 +213,11 @@ if __name__ == "__main__":
     soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
     for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-        tracks = get_user_tracks(soundcloudclient, artist)
-        print "Found %d tracks by artist %s" % (len(tracks), artist)
-    random.shuffle(tracks)
-    
-    for t in tracks:
-        clips_from_track(t)
+        tracks = get_artist_info(soundcloudclient, artist)
+#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+#        tracks = get_artist_tracks(soundcloudclient, artist)
+#        print "Found %d tracks by artist %s" % (len(tracks), artist)
+#    random.shuffle(tracks)
+#    
+#    for t in tracks:
+#        clips_from_track(t)
