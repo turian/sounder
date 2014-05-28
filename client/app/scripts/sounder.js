@@ -15,6 +15,15 @@ $.getJSON('/local_config.json', function(data) {
     SOUNDCLOUD_CALLBACK_URL = data.SOUNDCLOUD_CALLBACK_URL;
 
     var accessToken = Cookies.get('SC.accessToken');
+
+    if (!accessToken) {
+        // Try to retrieve the access token from the URL, e.g. if Soundcloud redirected back
+        var code = purl(window.location.href).param("code"); 
+        var accessToken = purl(window.location.href).fparam("access_token");
+
+        if (code) Cookies.set('SC.code', code);
+        if (accessToken) Cookies.set('SC.accessToken', accessToken);
+    }
     if (accessToken) {
         SC.initialize({
             client_id: SOUNDCLOUD_CLIENT_ID,
@@ -24,27 +33,13 @@ $.getJSON('/local_config.json', function(data) {
         });
         soundcloudLoggedin();
     } else {
-        $("#login-button").show();
+        //$("#login-button").show();
+        window.location = "https://soundcloud.com/connect?client_id=" + SOUNDCLOUD_CLIENT_ID + "&redirect_uri=" + SOUNDCLOUD_CALLBACK_URL + "&response_type=code_and_token&display=popup&scope=non-expiring";
     }
 });
 
-var soundcloudLogin = function () {
-    console.log("Running soundcloud login");
-   
-    // initialize soundcloud API with key and redirect URL
-    SC.initialize({
-        client_id: SOUNDCLOUD_CLIENT_ID,
-        redirect_uri: SOUNDCLOUD_CALLBACK_URL
-    });
-    
-    // initiate authentication popup
-    SC.connect(function() {
-        console.log("Saving access token as cookie");
-        Cookies.set('SC.accessToken', SC.accessToken(), { expires: '01/01/2020' });
-    });
-}
-
 var soundcloudLoggedin = function () {
+    $("#login-button").hide();
     // This gets the authenticated user's username
     SC.get('/me', function(me) { 
         $("#username-div").html(me.username);
