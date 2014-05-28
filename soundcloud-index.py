@@ -107,23 +107,33 @@ def get_artist_info(soundcloudclient, artist):
     info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
     firebase.put_async("/artists/%s" % id, "info", info)
 
+# Try to get query q from firebase url fburl
+# Otherwise, call retrievefn with the parameters given in retrieveparams
+def _firebase_get_or_retrieve(fburl, q, retrievefn, retrieveparams):
+    obj = firebase.get(fburl, q)
+    if obj:
+        print "(Firebase cached) Found %s %s" % (fburl, q)
+        if "cachedAt" in obj: del obj["cachedAt"]
+        return obj
+
+    try:
+        obj = retrievefn(*retrieveparams)
+        obj["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
+
+        firebase.delete(fburl, q)
+        firebase.put_async(fburl, q, obj)
+        del obj["cachedAt"]
+        return obj
+    except Exception, e:
+        print "Exception on %s %s, SKIPPING." % (fburl, q), type(e), e
+
+def _soundcloudclient_getobj(soundcloudclient, param):
+    return soundcloudclient.get(param).obj
+
 # Get a soundcloud dict, like "tracks" or "followings", and store it in firebase
 def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
     fburl = "/%s/%s" % (ourname, id)
-    dict = firebase.get(fburl, q)
-    if dict:
-        print "(Firebase cached) Found %d %s at %s" % (len(dict), q, fburl)
-        del dict["cachedAt"]
-        return dict
-
-    dict = _retrieve_soundcloud_dict(soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q))
-    dict["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
-
-    # @todo: Don't delete everything. Just insert what's new.
-    firebase.delete(fburl, q)
-    firebase.put_async(fburl, q, dict)
-    del dict["cachedAt"]
-    return dict
+    return _firebase_get_or_retrieve(fburl, q, _retrieve_soundcloud_dict, [soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q)])
 
 def get_artist_dict(soundcloudclient, q, id):
     return _get_soundcloud_dict(soundcloudclient, "artists", "users", q, id)
@@ -132,45 +142,21 @@ def get_track_dict(soundcloudclient, q, id):
     return _get_soundcloud_dict(soundcloudclient, "tracks", "tracks", q, id)
 
 def get_track_info(soundcloudclient, track_id):
-    info = firebase.get("/tracks/%s" % track_id, "info")
-    if info:
-        print "(Firebase cached) Found track info for %s" % track_id
-        del info["cachedAt"]
-        return info
+    fburl = "/tracks/%s" % track_id
+    q = "info"
+    return _firebase_get_or_retrieve(fburl, q, _soundcloudclient_getobj, [soundcloudclient, fburl])
 
-    info = soundcloudclient.get('/tracks/%s' % track_id).obj
-    info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
-    print "Retrived soundcloud info for track %s" % track_id
-
-    # @todo: Don't delete everything. Just insert what's new.
-    firebase.delete("/tracks/%s" % track_id, "info")
-    firebase.put_async("/tracks/%s" % track_id, "info", info)
-    del info["cachedAt"]
-    return info
+def _run_echonest(soundcloudclient, stream_url):
+    print "Running echonest on %s" % stream_url
+    real_stream_url = soundcloudclient.get(stream_url, allow_redirects=False)
+    echotrack = pyechonest.track.track_from_url(real_stream_url.location)
+    r = requests.get(echotrack.analysis_url)
+    return simplejson.loads(r.content)
 
 def echonest_from_track(soundcloudclient, track):
-    track_id = track["id"]
-    info = firebase.get("/tracks/%s" % track_id, "echonest_analysis")
-    if info:
-        print "(Firebase cached) Found echonest info for %s" % track_id
-        del info["cachedAt"]
-        return info
-
-    try:
-        print "Running echonest on %s" % t["stream_url"]
-        stream_url = soundcloudclient.get(t["stream_url"], allow_redirects=False)
-        echotrack = pyechonest.track.track_from_url(stream_url.location)
-        r = requests.get(echotrack.analysis_url)
-        info = simplejson.loads(r.content)
-        info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
-
-        firebase.delete("/tracks/%s" % track_id, "echonest_analysis")
-        firebase.put_async("/tracks/%s" % track_id, "echonest_analysis", info)
-        del info["cachedAt"]
-        return info
-    except Exception, e:
-        print "Exception on %s %s, SKIPPING." % (track_id, track["title"]), type(e), e
-        
+    fburl = "/tracks/%s" % track["id"]
+    q = "echonest_analysis"
+    return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]])
 
 def clips_from_track(t):
     tmpdir = tempfile.mkdtemp()
