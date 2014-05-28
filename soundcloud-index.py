@@ -126,6 +126,9 @@ def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
 def get_artist_dict(soundcloudclient, q, id):
     return _get_soundcloud_dict(soundcloudclient, "artists", "users", q, id)
 
+def get_track_dict(soundcloudclient, q, id):
+    return _get_soundcloud_dict(soundcloudclient, "tracks", "tracks", q, id)
+
 def get_track_info(soundcloudclient, track_id):
     info = firebase.get("/tracks/%s" % track_id, "info")
     if info:
@@ -237,5 +240,7 @@ if __name__ == "__main__":
 
     for t in tracks:
         get_track_info(soundcloudclient, t["id"])
+        get_track_dict(soundcloudclient, "comments", t["id"])
+#        get_track_dict(soundcloudclient, "favoriters", t["id"])
 #        echonest_from_track(t)
 #        clips_from_track(t)
