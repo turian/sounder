@@ -113,6 +113,7 @@ def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
     dict = firebase.get(fburl, q)
     if dict:
         print "(Firebase cached) Found %d %s at %s" % (len(dict), q, fburl)
+        del dict["cachedAt"]
         return dict
 
     dict = _retrieve_soundcloud_dict(soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q))
@@ -121,6 +122,7 @@ def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
     # @todo: Don't delete everything. Just insert what's new.
     firebase.delete(fburl, q)
     firebase.put_async(fburl, q, dict)
+    del dict["cachedAt"]
     return dict
 
 def get_artist_dict(soundcloudclient, q, id):
@@ -133,7 +135,7 @@ def get_track_info(soundcloudclient, track_id):
     info = firebase.get("/tracks/%s" % track_id, "info")
     if info:
         print "(Firebase cached) Found track info for %s" % track_id
-        print info
+        del info["cachedAt"]
         return info
 
     info = soundcloudclient.get('/tracks/%s' % track_id).obj
@@ -143,7 +145,32 @@ def get_track_info(soundcloudclient, track_id):
     # @todo: Don't delete everything. Just insert what's new.
     firebase.delete("/tracks/%s" % track_id, "info")
     firebase.put_async("/tracks/%s" % track_id, "info", info)
+    del info["cachedAt"]
     return info
+
+def echonest_from_track(soundcloudclient, track):
+    track_id = track["id"]
+    info = firebase.get("/tracks/%s" % track_id, "echonest_analysis")
+    if info:
+        print "(Firebase cached) Found echonest info for %s" % track_id
+        del info["cachedAt"]
+        return info
+
+    try:
+        print "Running echonest on %s" % t["stream_url"]
+        stream_url = soundcloudclient.get(t["stream_url"], allow_redirects=False)
+        echotrack = pyechonest.track.track_from_url(stream_url.location)
+        r = requests.get(echotrack.analysis_url)
+        info = simplejson.loads(r.content)
+        info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
+
+        firebase.delete("/tracks/%s" % track_id, "echonest_analysis")
+        firebase.put_async("/tracks/%s" % track_id, "echonest_analysis", info)
+        del info["cachedAt"]
+        return info
+    except Exception, e:
+        print "Exception on %s %s, SKIPPING." % (track_id, track["title"]), type(e), e
+        
 
 def clips_from_track(t):
     tmpdir = tempfile.mkdtemp()
@@ -239,8 +266,8 @@ if __name__ == "__main__":
     random.shuffle(tracks)
 
     for t in tracks:
-        get_track_info(soundcloudclient, t["id"])
+        track = get_track_info(soundcloudclient, t["id"])
         get_track_dict(soundcloudclient, "comments", t["id"])
 #        get_track_dict(soundcloudclient, "favoriters", t["id"])
-#        echonest_from_track(t)
+        echonest_from_track(soundcloudclient, track)
 #        clips_from_track(t)
