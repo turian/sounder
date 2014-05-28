@@ -27,6 +27,7 @@ import boto     # Import this after we set the environment variables
 import boto.s3.key
 
 firebase = firebase.FirebaseApplication(CONFIG["FIREBASE_URL"], None)
+FIREBASE_SERVER_TIMESTAMP = {".sv": "timestamp"}
 
 s3 = boto.connect_s3()
 print "Creating new bucket with name: " + CONFIG["AWS_BUCKET_NAME"]
@@ -103,6 +104,7 @@ def get_artist_info(soundcloudclient, artist):
     # We have to convert the artist name to an id, so we must run the soundcloudclient
     info = soundcloudclient.get('/users/%s' % artist).obj
     id = info["id"]
+    info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
     firebase.put_async("/artists/%s" % id, "info", info)
 
 # Get a soundcloud artist dict, like "tracks" or "followings", and store it in firebase
@@ -114,6 +116,7 @@ def get_artist_dict(soundcloudclient, q, artist):
         return dicts[q]
 
     dict = _get_soundcloud_dict(soundcloudclient, '/users/%s/%s' % (artist, q))
+    dict["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
 
     # @todo: Don't delete everything. Just insert what's new.
     firebase.delete("/artists/%s" % artist, q)
@@ -193,6 +196,7 @@ def _clips_from_track_help(t, tmpdir):
 
     # Save the clip information to firebase
     for c in clips_to_push:
+        # TODO: Save times
         firebase.post_async("/clips/%d/%d" % (t.user_id, t.id), c)
 
 if __name__ == "__main__":
@@ -201,11 +205,11 @@ if __name__ == "__main__":
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-#        tracks = get_artist_info(soundcloudclient, artist)
+    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+        tracks = get_artist_info(soundcloudclient, artist)
 
     for artist_id in firebase.get("/", "artists"):
-#        get_artist_dict(soundcloudclient, "followings", artist_id)
+        get_artist_dict(soundcloudclient, "followings", artist_id)
         get_artist_dict(soundcloudclient, "favorites", artist_id)
         get_artist_dict(soundcloudclient, "tracks", artist_id)
 
