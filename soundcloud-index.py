@@ -89,7 +89,7 @@ def _retrieve_soundcloud_list(soundcloudclient, q):
         print "Getting page %d for %s" % (i, q)
 #        new_items = soundcloudclient.get(q, order='created_at', limit=page_size, offset=i)
         new_items = soundcloudclient.get(q, limit=page_size, offset=i)
-        if len(new_items) == 0: break
+        if len(new_items) < page_size: break
         for item in new_items: list.append(item.obj)
     return list
 
@@ -162,7 +162,11 @@ def _run_echonest(soundcloudclient, stream_url):
 def echonest_from_track(soundcloudclient, track):
     fburl = "/tracks/%s" % track["id"]
     q = "echonest_analysis"
-    return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]])
+    if "stream_url" in track:
+        return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]])
+    else:
+        print "Could not find stream_url for", t.title, t.permalink_url
+        return None
 
 def clips_from_track(t):
     tmpdir = tempfile.mkdtemp()
@@ -261,5 +265,5 @@ if __name__ == "__main__":
         track = get_track_info(soundcloudclient, t["id"])
         get_track_dict(soundcloudclient, "comments", t["id"])
 #        get_track_dict(soundcloudclient, "favoriters", t["id"])
-        echonest_from_track(soundcloudclient, track)
+#        echonest_from_track(soundcloudclient, track)
 #        clips_from_track(t)
