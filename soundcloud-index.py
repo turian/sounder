@@ -123,6 +123,22 @@ def get_artist_dict(soundcloudclient, q, artist):
     firebase.put_async("/artists/%s" % artist, q, dict)
     return dict
 
+def get_track_info(soundcloudclient, track_id):
+    info = firebase.get("/tracks/%s" % track_id, "info")
+    if info:
+        print "(Firebase cached) Found track info for %s" % track_id
+        print info
+        return info
+
+    info = soundcloudclient.get('/tracks/%s' % track_id).obj
+    info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
+    print "Retrived soundcloud info for track %s" % track_id
+
+    # @todo: Don't delete everything. Just insert what's new.
+    firebase.delete("/tracks/%s" % track_id, "info")
+    firebase.put_async("/tracks/%s" % track_id, "info", info)
+    return info
+
 def clips_from_track(t):
     tmpdir = tempfile.mkdtemp()
     print "Working in tmpdir", tmpdir
@@ -205,25 +221,18 @@ if __name__ == "__main__":
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-        tracks = get_artist_info(soundcloudclient, artist)
+#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+#        tracks = get_artist_info(soundcloudclient, artist)
 
     for artist_id in firebase.get("/", "artists"):
         get_artist_dict(soundcloudclient, "followings", artist_id)
         get_artist_dict(soundcloudclient, "favorites", artist_id)
-        get_artist_dict(soundcloudclient, "tracks", artist_id)
+        tracks = get_artist_dict(soundcloudclient, "tracks", artist_id)
 
-#    tracks = _get_soundcloud_list(soundcloudclient, '/users/%s/tracks' % id)
-#    print tracks
-#    followings = _get_soundcloud_list(soundcloudclient, '/users/%s/followings' % id)
-#    print followings
-#    favorites = _get_soundcloud_list(soundcloudclient, '/users/%s/favorites' % id)
-#    print favorites
+    tracks = tracks.values()
+    random.shuffle(tracks)
 
-#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-#        tracks = get_artist_tracks(soundcloudclient, artist)
-#        print "Found %d tracks by artist %s" % (len(tracks), artist)
-#    random.shuffle(tracks)
-#    
-#    for t in tracks:
+    for t in tracks:
+        get_track_info(soundcloudclient, t["id"])
+#        echonest_from_track(t)
 #        clips_from_track(t)
