@@ -26,14 +26,17 @@
       <ion-content class="has-header">
         <div id="username-div"></div>
 
-        <button class="button button-energized" id="start-button">
+        <button class="button button-energized" id="login-button" onClick="soundcloudLogin();" style="display: none;">
+          <img src="http://connect.soundcloud.com/2/btn-connect-sc-l.png">
+        </button>
+        <button class="button button-energized" id="start-button" style="display: none;">
           <i class="ion-ionic" data-pack="default" data-tags="music, watch, arrow, right"></i>
         </button>
-        <button class="button button-energized" id="play-button">
+        <button class="button button-energized" id="play-button" style="display: none;">
           <i class="ion-play" data-pack="default" data-tags="music, watch, arrow, right"></i>
         </button>
         <center>
-        <div class="button button-energized" id="swipe-button">
+        <div class="button button-energized" id="swipe-button" style="display: none;">
           <i class="ion-flash" data-pack="default"></i>
 <!--        <img id="track-hash" src="http://robohash.org/YOUR-TEXT.png"> -->
         </div >
@@ -59,6 +62,7 @@
     <script src="bower_components/jquery-ui/ui/jquery-ui.js"></script>
     <script src="bower_components/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js"></script>
     <script src="bower_components/knuth-shuffle/index.js"></script>
+    <script src="bower_components/cookies-js/src/cookies.js"></script>
     <!-- endbower -->
     <script src="/scripts/soundcloud/sdk.js"></script>
     <!-- endbuild -->

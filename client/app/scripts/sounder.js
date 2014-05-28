@@ -8,30 +8,51 @@ soundManager.setup({
 });
 
 var SOUNDCLOUD_CLIENT_ID = null;
+var SOUNDCLOUD_CALLBACK_URL = null;
 var user = null;
-var soundcloudLogin = function () {
-    $.getJSON('/local_config.json', function(data) {
-        SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID
-    
-        // initialize soundcloud API with key and redirect URL
+$.getJSON('/local_config.json', function(data) {
+    SOUNDCLOUD_CLIENT_ID = data.SOUNDCLOUD_CLIENT_ID;
+    SOUNDCLOUD_CALLBACK_URL = data.SOUNDCLOUD_CALLBACK_URL;
+
+    var accessToken = Cookies.get('SC.accessToken');
+    if (accessToken) {
         SC.initialize({
-            // This is the sample client_id. you should replace this with your own
             client_id: SOUNDCLOUD_CLIENT_ID,
-            redirect_uri: "http://localhost:9000/callback.html" // @todo: Configure this for deployment
+            redirect_uri: SOUNDCLOUD_CALLBACK_URL,
+            access_token: accessToken,
+            scope: 'non-expiring'
         });
+        soundcloudLoggedin();
+    } else {
+        $("#login-button").show();
+    }
+});
+
+var soundcloudLogin = function () {
+    console.log("Running soundcloud login");
+   
+    // initialize soundcloud API with key and redirect URL
+    SC.initialize({
+        client_id: SOUNDCLOUD_CLIENT_ID,
+        redirect_uri: SOUNDCLOUD_CALLBACK_URL
+    });
     
-        // initiate authentication popup
-        SC.connect(function() {
-            // This gets the authenticated user's username
-            SC.get('/me', function(me) { 
-              $("#username-div").html(me.username);
-              user = {id: me.id, soundcloud: me};
-              if (allClips && user) {
-                  $("#start-button").show();
-              }
-              firebase.child("users").child(user.id).update(user);
-            });
-        });
+    // initiate authentication popup
+    SC.connect(function() {
+        console.log("Saving access token as cookie");
+        Cookies.set('SC.accessToken', SC.accessToken(), { expires: '01/01/2020' });
+    });
+}
+
+var soundcloudLoggedin = function () {
+    // This gets the authenticated user's username
+    SC.get('/me', function(me) { 
+        $("#username-div").html(me.username);
+        user = {id: me.id, soundcloud: me};
+        if (allClips && user) {
+            $("#start-button").show();
+        }
+        firebase.child("users").child(user.id).update(user);
     });
 }
 
@@ -41,8 +62,6 @@ $.getJSON('/firebase.json', function(data) {
     firebase_url = "https://" + data.firebase + ".firebaseio.com/"
 
     firebase = new Firebase(firebase_url);
-
-    soundcloudLogin();
 
     firebase.child("clips").once('value', function(data) {
       data = data.val();
@@ -79,10 +98,6 @@ $.getJSON('/firebase.json', function(data) {
       }
     });
 });
-
-$("#start-button").hide();
-$("#play-button").hide();
-$("#swipe-button").hide();
 
 var clipIdx = 0;
 

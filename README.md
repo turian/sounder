@@ -51,3 +51,8 @@ To deploy:
 ```
 firebase deploy
 ```
+
+Todo
+----
+
+* Make sure that the visitor is going to the https endpoint
