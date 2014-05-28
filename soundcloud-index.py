@@ -82,7 +82,7 @@ class Track:
     def __init__(self, **entries): 
         self.__dict__.update(entries)
 
-def _get_soundcloud_list(soundcloudclient, q):
+def _retrieve_soundcloud_list(soundcloudclient, q):
     page_size = 200
     list = []
     for i in range(0, 8200, 200):   # Soundcloud pagination maxes
@@ -93,8 +93,8 @@ def _get_soundcloud_list(soundcloudclient, q):
         for item in new_items: list.append(item.obj)
     return list
 
-def _get_soundcloud_dict(soundcloudclient, q):
-    list = _get_soundcloud_list(soundcloudclient, q)
+def _retrieve_soundcloud_dict(soundcloudclient, q):
+    list = _retrieve_soundcloud_list(soundcloudclient, q)
     dict = {}
     for l in list:
         dict[l["id"]] = l
@@ -107,21 +107,24 @@ def get_artist_info(soundcloudclient, artist):
     info["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
     firebase.put_async("/artists/%s" % id, "info", info)
 
-# Get a soundcloud artist dict, like "tracks" or "followings", and store it in firebase
-def get_artist_dict(soundcloudclient, q, artist):
-    print ('/artists/%s' % artist)
-    dicts = firebase.get("/artists", artist)
-    if q in dicts:
-        print "(Firebase cached) Found %d %s by artist %s" % (len(dicts[q]), q, artist)
-        return dicts[q]
+# Get a soundcloud dict, like "tracks" or "followings", and store it in firebase
+def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
+    fburl = "/%s/%s" % (ourname, id)
+    dict = firebase.get(fburl, q)
+    if dict:
+        print "(Firebase cached) Found %d %s at %s" % (len(dict), q, fburl)
+        return dict
 
-    dict = _get_soundcloud_dict(soundcloudclient, '/users/%s/%s' % (artist, q))
+    dict = _retrieve_soundcloud_dict(soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q))
     dict["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
 
     # @todo: Don't delete everything. Just insert what's new.
-    firebase.delete("/artists/%s" % artist, q)
-    firebase.put_async("/artists/%s" % artist, q, dict)
+    firebase.delete(fburl, q)
+    firebase.put_async(fburl, q, dict)
     return dict
+
+def get_artist_dict(soundcloudclient, q, id):
+    return _get_soundcloud_dict(soundcloudclient, "artists", "users", q, id)
 
 def get_track_info(soundcloudclient, track_id):
     info = firebase.get("/tracks/%s" % track_id, "info")
@@ -221,8 +224,8 @@ if __name__ == "__main__":
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-#        tracks = get_artist_info(soundcloudclient, artist)
+    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+        tracks = get_artist_info(soundcloudclient, artist)
 
     for artist_id in firebase.get("/", "artists"):
         get_artist_dict(soundcloudclient, "followings", artist_id)
