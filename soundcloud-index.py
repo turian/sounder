@@ -151,7 +151,13 @@ def _run_echonest(soundcloudclient, stream_url):
     real_stream_url = soundcloudclient.get(stream_url, allow_redirects=False)
     echotrack = pyechonest.track.track_from_url(real_stream_url.location)
     r = requests.get(echotrack.analysis_url)
-    return simplejson.loads(r.content)
+    obj = simplejson.loads(r.content)
+
+    # Delete the largest analyses
+    del obj["segments"]
+    del obj["tatums"]
+
+    return obj
 
 def echonest_from_track(soundcloudclient, track):
     fburl = "/tracks/%s" % track["id"]
