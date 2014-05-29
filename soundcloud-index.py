@@ -175,26 +175,24 @@ def clips_from_track(track):
     comments = get_track_dict(soundcloudclient, "comments", t["id"], retrieve=False)
     echonest_analysis = echonest_from_track(soundcloudclient, track, retrieve=False)
 
-    if comments and echonest_analysis:
-        print track
-    
-    return
+    if not (comments and echonest_analysis):
+        print "Missing information to process track", t.title
+        return
 
     tmpdir = tempfile.mkdtemp()
     print "Working in tmpdir", tmpdir
     try:
-        _clips_from_track_help(t, tmpdir)
+        _clips_from_track_help(track, comments, echonest_analysis, tmpdir)
     except Exception, e:
-        print "Exception on %s, SKIPPING." % t.title, type(e), e
+        print "Exception on %s, SKIPPING." % track.title, type(e), e
     finally:
         # Clean up files lying around in that directory
         print "Clearing tmpdir", tmpdir
         shutil.rmtree(tmpdir)
 
-def _clips_from_track_help(t, tmpdir):
-    print t.title
+def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
     best_clips = _find_best_clips(t)
-
+    print best_clips
     return
 
     # If this endpoint exists, then we don't need to process this track
