@@ -5,6 +5,7 @@ import pyechonest.config
 import pyechonest.track
 import echonest.remix.audio as audio
 import requests
+import envoy
 
 import tempfile
 import random
@@ -121,6 +122,9 @@ def _firebase_get_or_retrieve(fburl, q, retrievefn, retrieveparams, retrieve=Tru
 
     try:
         obj = retrievefn(*retrieveparams)
+        if not obj:
+            print "No result to store"
+            return
         obj["cachedAt"] = FIREBASE_SERVER_TIMESTAMP
 
         firebase.delete(fburl, q)
@@ -168,47 +172,37 @@ def echonest_from_track(soundcloudclient, track, retrieve=True):
     if "stream_url" in track:
         return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]], retrieve=retrieve)
     else:
-        print "Could not find stream_url for", t.title, t.permalink_url
+        print "Could not find stream_url for", t["title"], t["permalink_url"]
         return None
 
 def clips_from_track(track):
-    comments = get_track_dict(soundcloudclient, "comments", t["id"], retrieve=False)
+    fburl = "/clips"
+    q = track["id"]
+    return _firebase_get_or_retrieve(fburl, q, _clips_from_track, [track])
+
+def _clips_from_track(track):
+    comments = get_track_dict(soundcloudclient, "comments", track["id"], retrieve=False)
     echonest_analysis = echonest_from_track(soundcloudclient, track, retrieve=False)
 
-    if not (comments and echonest_analysis):
-        print "Missing information to process track", t.title
-        return
+    if not comments or not echonest_analysis:
+        print "Missing information to process track", track["title"]
+        return None
 
     tmpdir = tempfile.mkdtemp()
     print "Working in tmpdir", tmpdir
+    obj = None
     try:
-        _clips_from_track_help(track, comments, echonest_analysis, tmpdir)
+        obj = _clips_from_track_help(Track(**track), comments, echonest_analysis, tmpdir)
     except Exception, e:
-        print "Exception on %s, SKIPPING." % track.title, type(e), e
+        print "Exception on %s, SKIPPING." % track["title"], type(e), e
     finally:
         # Clean up files lying around in that directory
         print "Clearing tmpdir", tmpdir
         shutil.rmtree(tmpdir)
+        return obj
 
 def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
     best_clips = _find_best_clips(t)
-    print best_clips
-    return
-
-    # If this endpoint exists, then we don't need to process this track
-    # Do this after _find_best_clips because that function has an
-    # rng that we'd like to keep deterministic
-    if firebase.get("/clips/%d" % t.user_id, "%d" % t.id):
-        print "Done", t.title
-        return
-
-    print "Running echonest"
-    stream_url = soundcloudclient.get(t.stream_url, allow_redirects=False)
-    echotrack = pyechonest.track.track_from_url(stream_url.location)
-
-#    print "Getting analysis"
-#    r = requests.get(echotrack.analysis_url)
-#    .write(r.content)
 
     print "Getting MP3"
     mp3file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
@@ -217,26 +211,34 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
     open(mp3file.name, "wb").write(r.content)
     print mp3file.name
 
-    print "Running audio analysis locally"
-    audio_file = audio.LocalAudioFile(mp3file.name)
-
-
-    # @todo: If this endpoint exists, then we don't need to process this track
-    firebase.delete("/clips/%d" % t.user_id, "%d" % t.id);
-
     clips_to_push = [];
     for idx, clip in enumerate(best_clips):
         # Find the bars that comprise this clip
         bars = []
-        for bar in audio_file.analysis.bars:
-            bar_end = bar.start + bar.duration
-            if bar_end > clip[1] / 1000. and bar.start < clip[2] / 1000.:
+        for bar in echonest_analysis["bars"]:
+            bar_end = bar["start"] + bar["duration"]
+            if bar_end > clip[1] / 1000. and bar["start"] < clip[2] / 1000.:
                 bars.append(bar)
 
+        wavfile = tempfile.NamedTemporaryFile(suffix=".wav", dir=tmpdir)
         clipfile = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
-        print "Writing clip to %s" % clipfile.name
-        print "ncomments %d, %f + %f" % (clip[0], bars[0].start, bars[-1].duration)
-        audio.getpieces(audio_file, bars).encode(clipfile.name)
+
+        # Chop out that clip
+        start = bars[0]["start"]
+        end = bars[-1]["start"] + bars[-1]["duration"]
+        cmd = "ffmpeg -i %s -y -ss %f -t %f %s" % (mp3file.name, start, end-start, wavfile.name)
+        print cmd
+        r = envoy.run(cmd)
+
+        # Normalize the wav file
+        envoy.run("normalize %s" % wavfile.name)
+
+        # Encode to mono 48 kbps MP3
+        envoy.run("lame -q 0 --abr 48 -a %s %s" % (wavfile.name, clipfile.name))
+
+        # Print the file size
+        r = envoy.run("du -h %s" % clipfile.name)
+        print "Clip size: %s" % string.strip(r.std_out)
 
         k = boto.s3.key.Key(s3bucket)
         clips3file = ("clips/%d/%d/%d.mp3" % (t.user_id, t.id, idx))
@@ -248,12 +250,9 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
         s3url = k.generate_url(expires_in_seconds)
         print "S3 url:", s3url
 
-        clips_to_push.append({"start": bars[0].start, "end": bars[-1].start + bars[-1].duration, "url": s3url, "key": k.key})
+        clips_to_push.append({"start": start, "end": end, "url": s3url, "key": k.key})
 
-    # Save the clip information to firebase
-    for c in clips_to_push:
-        # TODO: Save times
-        firebase.post_async("/clips/%d/%d" % (t.user_id, t.id), c)
+    return clips_to_push
 
 if __name__ == "__main__":
     random.seed()   # Use a random seed
@@ -261,8 +260,8 @@ if __name__ == "__main__":
     pyechonest.config.ECHO_NEST_API_KEY = CONFIG["ECHO_NEST_API_KEY"]
     soundcloudclient = soundcloud.Client(client_id=CONFIG["SOUNDCLOUD_CLIENT_ID"])
 
-    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
-        tracks = get_artist_info(soundcloudclient, artist)
+#    for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
+#        tracks = get_artist_info(soundcloudclient, artist)
 
     tracks = []
     for artist_id in firebase.get("/", "artists"):
@@ -274,12 +273,12 @@ if __name__ == "__main__":
     random.shuffle(tracks)
 
     for t in tracks:
-        try:
+#        try:
             track = get_track_info(soundcloudclient, t["id"])
 #            get_track_dict(soundcloudclient, "comments", t["id"])
 #    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
 #            echonest_from_track(soundcloudclient, track)
             clips_from_track(track)
-        except Exception, e:
-            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
+#        except Exception, e:
+#            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
 

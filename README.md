@@ -17,6 +17,7 @@ pip install python-firebase
 pip install boto
 pip install pyechonest
 pip install remix
+pip install envoy
 brew install normalize lame ffmpeg
 ```
 

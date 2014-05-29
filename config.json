@@ -1,6 +1,6 @@
 {
     "CLIP_DURATION": 10,
-    "CLIPS_PER_TRACK": 10,
+    "CLIPS_PER_TRACK": 5,
 
     "CLIPS_TO_TEST": 10000,
     "RANDOM_SEED": 0
