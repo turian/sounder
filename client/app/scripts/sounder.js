@@ -64,21 +64,15 @@ $.getJSON('/firebase.json', function(data) {
       for (var i = 0; i < keys.length; i += 1) {
         key1 = keys[i];
         keys2 = Object.keys(data[key1]);
-        for (var j = 0; j < keys2.length; j += 1) {
-            key2 = keys2[j]
-            keys3 = Object.keys(data[key1][key2]);
-            for (var k = 0; k < keys3.length; k += 1) {
-                key3 = keys3[k];
-                // Remove query params from the URL
-                // @todo REMOVEME, we only do this because the S3 urls are messed up
-                var re = /\?.*/;
-                data[key1][key2][key3].url = data[key1][key2][key3].url.replace(re, "");
-                if (data[key1][key2][key3]) {
+        if (key1 != "cachedAt") {
+            for (var j = 0; j < keys2.length; j += 1) {
+                key2 = keys2[j]
+                //data[key1][key2].url = data[key1][key2].url.replace(re, "");
+                if (key2 != "cachedAt" && data[key1][key2]) {
                     allClips.push({
-                        artist: key1,
-                        track: key2,
-                        clip: key3,
-                        data: data[key1][key2][key3]
+                        track: key1,
+                        clip: key2,
+                        data: data[key1][key2]
                     });
                 }
                 // @todo What to do if data is undefined?
@@ -88,6 +82,7 @@ $.getJSON('/firebase.json', function(data) {
       console.log("Loaded " + allClips.length + " clips");
       // Shuffle the clips, in place
       allClips = window.knuthShuffle(allClips.slice(0));
+      console.log(allClips);
       if (allClips && user) {
           $("#start-button").show();
       }
