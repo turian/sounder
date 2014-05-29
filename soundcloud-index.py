@@ -278,12 +278,12 @@ if __name__ == "__main__":
     random.shuffle(tracks)
 
     for t in tracks:
-#        try:
+        try:
             track = get_track_info(soundcloudclient, t["id"])
 #            get_track_dict(soundcloudclient, "comments", t["id"])
 #    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
 #            echonest_from_track(soundcloudclient, track)
             clips_from_track(soundcloudclient, track)
-#        except Exception, e:
-#            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
+        except Exception, e:
+            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
 
