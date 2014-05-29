@@ -13,6 +13,7 @@ import os.path
 import os
 import glob
 import shutil
+import string
 
 import simplejson
 
@@ -184,8 +185,11 @@ def _clips_from_track(track):
     comments = get_track_dict(soundcloudclient, "comments", track["id"], retrieve=False)
     echonest_analysis = echonest_from_track(soundcloudclient, track, retrieve=False)
 
+    if not echonest_analysis:
+        print "Missing echonest analysis for track", track["title"]
+    if not comments:
+        print "Missing comments for track", track["title"]
     if not comments or not echonest_analysis:
-        print "Missing information to process track", track["title"]
         return None
 
     tmpdir = tempfile.mkdtemp()
@@ -211,7 +215,7 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
     open(mp3file.name, "wb").write(r.content)
     print mp3file.name
 
-    clips_to_push = [];
+    clips_to_push = {}
     for idx, clip in enumerate(best_clips):
         # Find the bars that comprise this clip
         bars = []
@@ -246,11 +250,10 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
         print "Uploading some data to s3bucket with key: " + k.key
         k.set_contents_from_filename(clipfile.name)
         k.set_acl('public-read')
-        expires_in_seconds = 999999999
-        s3url = k.generate_url(expires_in_seconds)
+        s3url = k.generate_url(expires_in=0, query_auth=False)
         print "S3 url:", s3url
 
-        clips_to_push.append({"start": start, "end": end, "url": s3url, "key": k.key})
+        clips_to_push[idx] = {"start": start, "end": end, "url": s3url, "key": k.key}
 
     return clips_to_push
 
