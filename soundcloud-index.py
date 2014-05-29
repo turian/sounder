@@ -39,7 +39,7 @@ s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
 def _comments_per_clip(comments, start, end):
     i = 0
     for c in comments.values():
-        if c["timestamp"] >= start and c["timestamp"] <= end:
+        if "timestamp" in c and c["timestamp"] >= start and c["timestamp"] <= end:
             i += 1
     return i
 
