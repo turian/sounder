@@ -108,13 +108,16 @@ def get_artist_info(soundcloudclient, artist):
     firebase.put_async("/artists/%s" % id, "info", info)
 
 # Try to get query q from firebase url fburl
-# Otherwise, call retrievefn with the parameters given in retrieveparams
-def _firebase_get_or_retrieve(fburl, q, retrievefn, retrieveparams):
+# Otherwise, if retrieve==True, call retrievefn with the parameters
+# given in retrieveparams
+def _firebase_get_or_retrieve(fburl, q, retrievefn, retrieveparams, retrieve=True):
     obj = firebase.get(fburl, q)
     if obj:
         print "(Firebase cached) Found %s %s" % (fburl, q)
         if "cachedAt" in obj: del obj["cachedAt"]
         return obj
+
+    if not retrieve: return None
 
     try:
         obj = retrievefn(*retrieveparams)
@@ -131,20 +134,20 @@ def _soundcloudclient_getobj(soundcloudclient, param):
     return soundcloudclient.get(param).obj
 
 # Get a soundcloud dict, like "tracks" or "followings", and store it in firebase
-def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id):
+def _get_soundcloud_dict(soundcloudclient, ourname, soundcloudname, q, id, retrieve=True):
     fburl = "/%s/%s" % (ourname, id)
-    return _firebase_get_or_retrieve(fburl, q, _retrieve_soundcloud_dict, [soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q)])
+    return _firebase_get_or_retrieve(fburl, q, _retrieve_soundcloud_dict, [soundcloudclient, '/%s/%s/%s' % (soundcloudname, id, q)], retrieve=retrieve)
 
-def get_artist_dict(soundcloudclient, q, id):
-    return _get_soundcloud_dict(soundcloudclient, "artists", "users", q, id)
+def get_artist_dict(soundcloudclient, q, id, retrieve=True):
+    return _get_soundcloud_dict(soundcloudclient, "artists", "users", q, id, retrieve=retrieve)
 
-def get_track_dict(soundcloudclient, q, id):
-    return _get_soundcloud_dict(soundcloudclient, "tracks", "tracks", q, id)
+def get_track_dict(soundcloudclient, q, id, retrieve=True):
+    return _get_soundcloud_dict(soundcloudclient, "tracks", "tracks", q, id, retrieve=retrieve)
 
-def get_track_info(soundcloudclient, track_id):
+def get_track_info(soundcloudclient, track_id, retrieve=True):
     fburl = "/tracks/%s" % track_id
     q = "info"
-    return _firebase_get_or_retrieve(fburl, q, _soundcloudclient_getobj, [soundcloudclient, fburl])
+    return _firebase_get_or_retrieve(fburl, q, _soundcloudclient_getobj, [soundcloudclient, fburl], retrieve=retrieve)
 
 def _run_echonest(soundcloudclient, stream_url):
     print "Running echonest on %s" % stream_url
@@ -159,16 +162,24 @@ def _run_echonest(soundcloudclient, stream_url):
 
     return obj
 
-def echonest_from_track(soundcloudclient, track):
+def echonest_from_track(soundcloudclient, track, retrieve=True):
     fburl = "/tracks/%s" % track["id"]
     q = "echonest_analysis"
     if "stream_url" in track:
-        return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]])
+        return _firebase_get_or_retrieve(fburl, q, _run_echonest, [soundcloudclient, track["stream_url"]], retrieve=retrieve)
     else:
         print "Could not find stream_url for", t.title, t.permalink_url
         return None
 
-def clips_from_track(t):
+def clips_from_track(track):
+    comments = get_track_dict(soundcloudclient, "comments", t["id"], retrieve=False)
+    echonest_analysis = echonest_from_track(soundcloudclient, track, retrieve=False)
+
+    if comments and echonest_analysis:
+        print track
+    
+    return
+
     tmpdir = tempfile.mkdtemp()
     print "Working in tmpdir", tmpdir
     try:
@@ -183,6 +194,8 @@ def clips_from_track(t):
 def _clips_from_track_help(t, tmpdir):
     print t.title
     best_clips = _find_best_clips(t)
+
+    return
 
     # If this endpoint exists, then we don't need to process this track
     # Do this after _find_best_clips because that function has an
@@ -265,10 +278,10 @@ if __name__ == "__main__":
     for t in tracks:
         try:
             track = get_track_info(soundcloudclient, t["id"])
-            get_track_dict(soundcloudclient, "comments", t["id"])
-    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
-            echonest_from_track(soundcloudclient, track)
-    #        clips_from_track(t)
+#            get_track_dict(soundcloudclient, "comments", t["id"])
+#    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
+#            echonest_from_track(soundcloudclient, track)
+            clips_from_track(track)
         except Exception, e:
             print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
 
