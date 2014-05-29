@@ -157,6 +157,10 @@ var switchTrack = function() {
 //    $("#track-hash").attr("src","http://robohash.org/" + currentTrack.sound.url + ".png");
     updateTrackCount();
     currentTrack.sound.play({
+        whileplaying: function() {
+            var opacity = 1 - .9 * (this.position / this.durationEstimate);
+            $("#swipe-button").css("opacity", opacity);
+        },
         onfinish: function() {
             noSwipe();
         }
