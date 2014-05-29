@@ -82,7 +82,6 @@ $.getJSON('/firebase.json', function(data) {
       console.log("Loaded " + allClips.length + " clips");
       // Shuffle the clips, in place
       allClips = window.knuthShuffle(allClips.slice(0));
-      console.log(allClips);
       if (allClips && user) {
           $("#start-button").show();
       }
@@ -107,7 +106,6 @@ var getTrack = function() {
   // If we are already trying to load a track then just continue
   if (isLoading) return;
 
-  artist = allClips[clipIdx].artist;
   track = allClips[clipIdx].track;
   clip = allClips[clipIdx].clip;
   trackUrl = allClips[clipIdx].data.url;
@@ -127,7 +125,7 @@ var getTrack = function() {
   mySound.load( { 
     onload: function() { 
         isLoading = false;
-        trackSounds.push({artist: artist, track: track, clip: clip, sound: this});
+        trackSounds.push({track: track, clip: clip, sound: this});
         updateTrackCount();
         if (trackSounds.length == 1) {
             $("#play-button").show();
@@ -181,7 +179,6 @@ var noSwipe = function() {
 
 var userAction = function(action) {
     var data = {
-        artist: currentTrack.artist,
         track: currentTrack.track,
         clip: currentTrack.clip,
         action: action,
