@@ -156,12 +156,12 @@ var switchTrack = function() {
     console.log(currentTrack);
 //    $("#track-hash").attr("src","http://robohash.org/" + currentTrack.sound.url + ".png");
     updateTrackCount();
-    getTrack();
     currentTrack.sound.play({
         onfinish: function() {
             noSwipe();
         }
     });
+    getTrack();
 }
 
 var swipeLeft = function() {
@@ -185,8 +185,8 @@ var userAction = function(action) {
         position: currentTrack.sound.position,
         performedAt: Firebase.ServerValue.TIMESTAMP
     }
-    firebase.child("actions").child(user.id).push(data);
     switchTrack();
+    firebase.child("actions").child(user.id).push(data);
 }
 
 var originalSwipePosition = null;
