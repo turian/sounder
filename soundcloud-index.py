@@ -39,7 +39,7 @@ s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
 def _comments_per_clip(comments, start, end):
     i = 0
     for c in comments:
-        if c.timestamp >= start and c.timestamp <= end:
+        if c["timestamp"] >= start and c["timestamp"] <= end:
             i += 1
     return i
 
@@ -53,8 +53,7 @@ def _clips_overlap(clip1, clip2):
     if start2 >= start1 and start2 <= end1: return True
     return False
 
-def _find_best_clips(t):
-    comments = soundcloudclient.get('/tracks/%s/comments' % t.id)
+def _find_best_clips(t, comments):
     clips = []
 
 #    # Reseed. Hopefully this makes the code deterministic
@@ -176,12 +175,12 @@ def echonest_from_track(soundcloudclient, track, retrieve=True):
         print "Could not find stream_url for", t["title"], t["permalink_url"]
         return None
 
-def clips_from_track(track):
+def clips_from_track(soundcloudclient, track):
     fburl = "/clips"
     q = track["id"]
-    return _firebase_get_or_retrieve(fburl, q, _clips_from_track, [track])
+    return _firebase_get_or_retrieve(fburl, q, _clips_from_track, [soundcloudclient, track])
 
-def _clips_from_track(track):
+def _clips_from_track(soundcloudclient, track):
     comments = get_track_dict(soundcloudclient, "comments", track["id"], retrieve=False)
     echonest_analysis = echonest_from_track(soundcloudclient, track, retrieve=False)
 
@@ -196,7 +195,7 @@ def _clips_from_track(track):
     print "Working in tmpdir", tmpdir
     obj = None
     try:
-        obj = _clips_from_track_help(Track(**track), comments, echonest_analysis, tmpdir)
+        obj = _clips_from_track_help(soundcloudclient, Track(**track), comments, echonest_analysis, tmpdir)
     except Exception, e:
         print "Exception on %s, SKIPPING." % track["title"], type(e), e
     finally:
@@ -205,8 +204,8 @@ def _clips_from_track(track):
         shutil.rmtree(tmpdir)
         return obj
 
-def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
-    best_clips = _find_best_clips(t)
+def _clips_from_track_help(soundcloudclient, t, comments, echonest_analysis, tmpdir):
+    best_clips = _find_best_clips(soundcloudclient, t)
 
     print "Getting MP3"
     mp3file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
@@ -230,6 +229,9 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
         # Chop out that clip
         start = bars[0]["start"]
         end = bars[-1]["start"] + bars[-1]["duration"]
+        ncomments = _comments_per_clip(comments, start, end)
+        print "%d comments in new clip" % ncomments
+
         cmd = "ffmpeg -i %s -y -ss %f -t %f %s" % (mp3file.name, start, end-start, wavfile.name)
         print cmd
         r = envoy.run(cmd)
@@ -253,7 +255,7 @@ def _clips_from_track_help(t, comments, echonest_analysis, tmpdir):
         s3url = k.generate_url(expires_in=0, query_auth=False)
         print "S3 url:", s3url
 
-        clips_to_push[idx] = {"start": start, "end": end, "url": s3url, "key": k.key}
+        clips_to_push[idx] = {"start": start, "end": end, "ncomments": ncomments, "url": s3url, "key": k.key}
 
     return clips_to_push
 
@@ -281,7 +283,7 @@ if __name__ == "__main__":
 #            get_track_dict(soundcloudclient, "comments", t["id"])
 #    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
 #            echonest_from_track(soundcloudclient, track)
-            clips_from_track(track)
+            clips_from_track(soundcloudclient, track)
 #        except Exception, e:
 #            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
 
