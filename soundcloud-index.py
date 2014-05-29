@@ -38,7 +38,7 @@ s3bucket = s3.create_bucket(CONFIG["AWS_BUCKET_NAME"])
 
 def _comments_per_clip(comments, start, end):
     i = 0
-    for c in comments:
+    for c in comments.values():
         if c["timestamp"] >= start and c["timestamp"] <= end:
             i += 1
     return i
@@ -186,9 +186,9 @@ def _clips_from_track(soundcloudclient, track):
 
     if not echonest_analysis:
         print "Missing echonest analysis for track", track["title"]
-    if not comments:
+    if comments is None:
         print "Missing comments for track", track["title"]
-    if not comments or not echonest_analysis:
+    if comments is None or not echonest_analysis:
         return None
 
     tmpdir = tempfile.mkdtemp()
@@ -205,7 +205,7 @@ def _clips_from_track(soundcloudclient, track):
         return obj
 
 def _clips_from_track_help(soundcloudclient, t, comments, echonest_analysis, tmpdir):
-    best_clips = _find_best_clips(soundcloudclient, t)
+    best_clips = _find_best_clips(t, comments)
 
     print "Getting MP3"
     mp3file = tempfile.NamedTemporaryFile(suffix=".mp3", dir=tmpdir)
@@ -229,7 +229,7 @@ def _clips_from_track_help(soundcloudclient, t, comments, echonest_analysis, tmp
         # Chop out that clip
         start = bars[0]["start"]
         end = bars[-1]["start"] + bars[-1]["duration"]
-        ncomments = _comments_per_clip(comments, start, end)
+        ncomments = _comments_per_clip(comments, int(start * 1000), int(end * 1000))
         print "%d comments in new clip" % ncomments
 
         cmd = "ffmpeg -i %s -y -ss %f -t %f %s" % (mp3file.name, start, end-start, wavfile.name)
