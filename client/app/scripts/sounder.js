@@ -178,15 +178,18 @@ var noSwipe = function() {
 }
 
 var userAction = function(action) {
-    var data = {
-        track: currentTrack.track,
-        clip: currentTrack.clip,
-        action: action,
-        position: currentTrack.sound.position,
-        performedAt: Firebase.ServerValue.TIMESTAMP
+    // Users can't perform an action until .5 sec into the song
+    if (action == "none" || currentTrack.sound.position > 500) {
+        var data = {
+            track: currentTrack.track,
+            clip: currentTrack.clip,
+            action: action,
+            position: currentTrack.sound.position,
+            performedAt: Firebase.ServerValue.TIMESTAMP
+        }
+        switchTrack();
+        firebase.child("actions").child(user.id).push(data);
     }
-    switchTrack();
-    firebase.child("actions").child(user.id).push(data);
 }
 
 var originalSwipePosition = null;
