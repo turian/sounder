@@ -253,17 +253,22 @@ if __name__ == "__main__":
     for artist in CONFIG["SOUNDCLOUD_ARTISTS_TO_INDEX"]:
         tracks = get_artist_info(soundcloudclient, artist)
 
+    tracks = []
     for artist_id in firebase.get("/", "artists"):
         get_artist_dict(soundcloudclient, "followings", artist_id)
         get_artist_dict(soundcloudclient, "favorites", artist_id)
-        tracks = get_artist_dict(soundcloudclient, "tracks", artist_id)
+        tracks += get_artist_dict(soundcloudclient, "tracks", artist_id).values()
 
-    tracks = tracks.values()
+    tracks = tracks
     random.shuffle(tracks)
 
     for t in tracks:
-        track = get_track_info(soundcloudclient, t["id"])
-        get_track_dict(soundcloudclient, "comments", t["id"])
-#        get_track_dict(soundcloudclient, "favoriters", t["id"])
-#        echonest_from_track(soundcloudclient, track)
-#        clips_from_track(t)
+        try:
+            track = get_track_info(soundcloudclient, t["id"])
+            get_track_dict(soundcloudclient, "comments", t["id"])
+    #        get_track_dict(soundcloudclient, "favoriters", t["id"])
+            echonest_from_track(soundcloudclient, track)
+    #        clips_from_track(t)
+        except Exception, e:
+            print "Exception on %s, SKIPPING." % (t["id"]), type(e), e
+
